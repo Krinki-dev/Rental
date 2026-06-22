@@ -1,77 +1,112 @@
-<!DOCTYPE html>
-<html lang="en">
-<head><%- include('../partials/head', { title: 'Agreement - ' + tenant.flat_code }) %></head>
-<body>
-<%- include('../partials/tenant-nav', { active: 'agreement' }) %>
+<%- include('../partials/head', { title: 'Agreement - ' + tenant.flat_code }) %>
 
-<div class="print-bar">
-  <button class="btn" onclick="window.print()">Print this agreement</button>
-</div>
+<% const showMark = typeof showWatermark === 'undefined' ? true : !!showWatermark; %>
+<% const markText = watermarkText || 'DRAFT ONLY'; %>
+<% const adminPrintMode = !!isAdminPrint; %>
 
-<div class="agreement">
-  <div class="stamp-space">Space reserved for stamp</div>
+<% if (!adminPrintMode) { %>
+  <%- include('../partials/tenant-nav', { active: 'agreement' }) %>
+<% } %>
 
-  <h2>SUBLEASE AGREEMENT</h2>
-  <p style="text-align:center">This Sublease Agreement is a draft for printing. Both parties must sign the
-  printed copy by hand and have it notarized / attested as applicable.</p>
+<section class="agreement-shell <%= adminPrintMode ? 'admin-print-mode' : '' %>">
+  <% if (showMark) { %>
+    <div class="watermark" aria-hidden="true"><%= markText %></div>
+  <% } %>
 
-  <p class="clause"><strong>BETWEEN</strong></p>
-  <p class="clause">
-    <%= company.name %>, having its registered office at <%= company.registeredAddress %>
-    (hereinafter the "SUB-LESSOR").
-  </p>
+  <div class="agreement-card">
+    <header class="agreement-header">
+      <div>
+        <h1>Residential Rent Agreement</h1>
+        <p class="muted">Draft copy for review, download, and printing before final execution.</p>
+      </div>
+      <% if (!adminPrintMode) { %>
+        <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
+      <% } %>
+    </header>
 
-  <p class="clause"><strong>AND</strong></p>
-  <p class="clause">
-    Mr./Ms. <%= tenant.full_name %>, S/o / W/o <%= tenant.father_husband_name || '____________' %>,
-    resident of <%= tenant.permanent_address || '____________' %> (hereinafter the "SUB-LESSEE").
-  </p>
+    <section class="meta-grid">
+      <div><strong>Flat No.</strong><span><%= tenant.flat_code %></span></div>
+      <div><strong>Tenant</strong><span><%= tenant.full_name %></span></div>
+      <div><strong>Agreement term</strong><span><%= tenant.agreement_start || '____________' %> to <%= tenant.agreement_end || '____________' %></span></div>
+      <div><strong>Monthly rent</strong><span><%= formatINR(tenant.rent_amount || 0) %></span></div>
+      <div><strong>Security deposit</strong><span><%= formatINR(tenant.security_deposit || 0) %></span></div>
+      <div><strong>Property</strong><span><%= tenant.society_name %></span></div>
+    </section>
 
-  <p class="clause">
-    <strong>WHEREAS</strong> the Sub-Lessor has the right to sub-let Flat No.
-    <strong><%= tenant.flat_code %></strong> (Tower <%= tenant.tower %>, Floor <%= tenant.floor %>),
-    1 BHK, situated at <%= tenant.society_name %>.
-  </p>
+    <article class="agreement-body">
+      <p>
+        This Rent Agreement is made between <strong><%= company.name %></strong>, having its registered office at
+        <%= company.registeredAddress %> (hereinafter referred to as the <strong>Owner / Lessor</strong>), and
+        <strong><%= tenant.full_name %></strong>, S/o or W/o <%= tenant.father_husband_name || '____________' %>,
+        residing at <%= tenant.permanent_address || '____________' %> (hereinafter referred to as the <strong>Tenant / Lessee</strong>).
+      </p>
 
-  <p class="clause"><strong>1. TERM:</strong> 11 (eleven) months, from <%= tenant.agreement_start %> to <%= tenant.agreement_end %>.</p>
+      <ol>
+        <li><strong>Premises:</strong> The Lessor agrees to let out Flat No. <%= tenant.flat_code %>, Tower <%= tenant.tower || '-' %>, Floor <%= tenant.floor || '-' %>, Unit <%= tenant.unit || '-' %>, situated at <%= tenant.society_name %>.</li>
+        <li><strong>Term:</strong> The tenancy shall run from <%= tenant.agreement_start || '____________' %> to <%= tenant.agreement_end || '____________' %>, unless renewed or terminated earlier in accordance with this agreement.</li>
+        <li><strong>Rent:</strong> Monthly rent shall be <%= formatINR(tenant.rent_amount || 0) %>, payable on or before the 10th day of each month unless otherwise agreed in writing.</li>
+        <li><strong>Security Deposit:</strong> The Tenant shall pay a refundable security deposit of <%= formatINR(tenant.security_deposit || 0) %>, subject to lawful deductions for unpaid dues, damage, or adjustment at move-out.</li>
+        <li><strong>Utilities and Other Charges:</strong> Electricity, water, maintenance, penalty, GST, and other recoverable charges may be billed separately as applicable and reflected in the tenant ledger or receipts.</li>
+        <li><strong>Lock-in and Notice:</strong> Lock-in period shall be <%= tenant.lock_in_months || 3 %> month(s), and post lock-in notice period shall be <%= tenant.notice_period_months || 1 %> month(s), unless revised by the final signed version.</li>
+        <li><strong>Verification and Compliance:</strong> The Tenant shall complete police verification, provide valid KYC details, and comply with society rules, safety norms, and occupancy restrictions.</li>
+        <li><strong>Condition and Use:</strong> The Tenant shall keep the premises in reasonable condition and remain responsible for damages beyond normal wear and tear.</li>
+        <li><strong>Payment Records:</strong> Receipts and invoices issued through the portal shall serve as supporting payment records, but the final ledger and signed agreement shall prevail in case of reconciliation.</li>
+        <li><strong>Draft Status:</strong> This copy is a draft until the final signed agreement is executed and uploaded to the portal. Draft versions may carry a watermark when downloaded or viewed by the tenant.</li>
+      </ol>
 
-  <p class="clause"><strong>2. RENT:</strong> ₹<%= tenant.rent_amount %>/- per month, inclusive of maintenance, common-area
-  electricity/water, and GST. No additional maintenance charge applies.</p>
-
-  <p class="clause"><strong>3. SECURITY DEPOSIT:</strong> ₹<%= tenant.security_deposit %>/-, refundable on vacating,
-  subject to deductions for arrears or damage.</p>
-
-  <p class="clause"><strong>4. PAYMENT TERMS:</strong> Rent is due on or before the 10th of each month. A late fee
-  of ₹50/day applies after the due date.</p>
-
-  <p class="clause"><strong>5. LOCK-IN PERIOD:</strong> 3 (three) months. Early termination during lock-in forfeits
-  the security deposit.</p>
-
-  <p class="clause"><strong>6. NOTICE PERIOD:</strong> Either party may terminate after the lock-in with 1 (one)
-  month's written notice.</p>
-
-  <p class="clause"><strong>7. UTILITIES:</strong> Electricity and water are paid by the Sub-Lessee directly, based
-  on meter readings.</p>
-
-  <p class="clause"><strong>8. MAINTENANCE & DAMAGE:</strong> Structural repairs are the Sub-Lessor's responsibility.
-  Minor repairs and any damage from negligence are the Sub-Lessee's responsibility.</p>
-
-  <p class="clause"><strong>9. FURNISHING:</strong> The Sub-Lessor provides fans and lights, to be returned in good
-  condition (normal wear excepted).</p>
-
-  <p class="clause"><strong>10. RULES:</strong> The Sub-Lessee shall follow all society rules. Pets are allowed as
-  per society rules. Subletting is allowed only with prior information and valid ID proof shared with the Sub-Lessor.</p>
-
-  <p class="clause"><strong>11. POLICE VERIFICATION:</strong> Mandatory within 7 days of possession. Failure to
-  complete this makes the agreement voidable at the Sub-Lessor's discretion.</p>
-
-  <p class="clause"><strong>12. INSPECTION:</strong> The Sub-Lessor may inspect the premises with 24 hours' prior notice.</p>
-
-  <div class="sign-row">
-    <div>SUB-LESSOR<br>For <%= company.name %><br>Authorized Signatory</div>
-    <div>SUB-LESSEE<br><%= tenant.full_name %><br>Signature</div>
+      <section class="signature-grid">
+        <div class="sign-box">
+          <span>Owner / Lessor Signature</span>
+        </div>
+        <div class="sign-box">
+          <span>Tenant / Lessee Signature</span>
+        </div>
+      </section>
+    </article>
   </div>
-</div>
+</section>
 
-</body>
-</html>
+<style>
+  body { background: #f3f4f6; }
+  .agreement-shell { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; position: relative; }
+  .agreement-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 28px; position: relative; overflow: hidden; }
+  .agreement-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+  .agreement-header h1 { margin: 0 0 8px; font-size: 2rem; }
+  .muted { color: #6b7280; }
+  .print-btn { border: 0; background: #111827; color: #fff; border-radius: 8px; padding: 10px 14px; font-weight: 700; cursor: pointer; }
+  .meta-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .meta-grid div { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fafafa; }
+  .meta-grid strong { display: block; font-size: 12px; color: #4b5563; margin-bottom: 6px; }
+  .agreement-body p { line-height: 1.7; margin-bottom: 16px; }
+  .agreement-body ol { padding-left: 20px; line-height: 1.75; }
+  .agreement-body li { margin-bottom: 10px; }
+  .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; }
+  .sign-box { border-top: 1px solid #111827; min-height: 70px; display: flex; align-items: flex-end; padding-top: 50px; font-weight: 600; }
+  .watermark {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(48px, 10vw, 96px);
+    font-weight: 800;
+    color: rgba(220, 38, 38, 0.12);
+    transform: rotate(-28deg);
+    pointer-events: none;
+    z-index: 999;
+    user-select: none;
+    letter-spacing: 0.18em;
+  }
+  @media (max-width: 760px) {
+    .agreement-header, .meta-grid, .signature-grid { grid-template-columns: 1fr; display: grid; }
+    .agreement-header { align-items: stretch; }
+  }
+  @media print {
+    body { background: #fff; }
+    .agreement-shell { max-width: 100%; padding: 0; }
+    .agreement-card { border: 0; border-radius: 0; padding: 0; }
+    .print-btn, nav { display: none !important; }
+    .watermark { position: fixed; }
+    .admin-print-mode .watermark { display: none !important; }
+  }
+</style>

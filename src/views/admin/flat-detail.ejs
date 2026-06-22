@@ -1,175 +1,220 @@
-<!DOCTYPE html>
-<html lang="en">
-<head><%- include('../partials/head', { title: flat.flat_code }) %></head>
-<body>
+<%- include('../partials/head', { title: `Flat ${flat.flat_code}` }) %>
 <%- include('../partials/admin-nav', { active: 'flats' }) %>
-<div class="shell">
-  <div class="page-head">
-    <h1 class="mono"><%= flat.flat_code %></h1>
-    <p>Tower <%= flat.tower || '-' %> · Floor <%= flat.floor || '-' %> · Rent <%= formatINR(flat.rent_amount) %>/month</p>
+
+<section class="container">
+  <div class="page-header">
+    <div>
+      <h1>Flat <%= flat.flat_code %></h1>
+      <p><%= flat.society_name || '' %> <% if (flat.tower || flat.floor || flat.unit) { %>• Tower <%= flat.tower || '-' %>, Floor <%= flat.floor || '-' %>, Unit <%= flat.unit || '-' %><% } %></p>
+    </div>
+    <div class="header-meta">
+      <span class="badge <%= flat.status === 'occupied' ? 'badge-success' : 'badge-muted' %>"><%= flat.status %></span>
+      <span class="rent-chip">Rent <%= formatINR(flat.rent_amount || 0) %></span>
+    </div>
   </div>
 
-  <% if (!tenant) { %>
-    <div class="card" style="max-width:680px">
-      <h3>This flat is vacant - add a tenant</h3>
-      <form method="POST" action="/admin/flats/<%= flat.id %>/tenant">
-        <div class="field-row">
-          <div>
-            <label for="full_name">Tenant full name</label>
-            <input id="full_name" name="full_name" required>
-          </div>
-          <div>
-            <label for="father_husband_name">Father's / husband's name</label>
-            <input id="father_husband_name" name="father_husband_name">
-          </div>
-        </div>
-        <div class="field-row">
-          <div>
-            <label for="phone">Phone</label>
-            <input id="phone" name="phone" required>
-          </div>
-          <div>
-            <label for="alt_phone">Alternate phone</label>
-            <input id="alt_phone" name="alt_phone">
-          </div>
-          <div>
-            <label for="email">Email (login link is sent here)</label>
-            <input id="email" name="email" type="email" required>
-          </div>
-        </div>
-        <label for="permanent_address">Permanent address</label>
-        <textarea id="permanent_address" name="permanent_address"></textarea>
-        <div class="field-row">
-          <div>
-            <label for="aadhaar_number">Aadhaar number</label>
-            <input id="aadhaar_number" name="aadhaar_number">
-          </div>
-          <div>
-            <label for="pan_number">PAN number</label>
-            <input id="pan_number" name="pan_number">
-          </div>
-        </div>
-        <div class="field-row">
-          <div>
-            <label for="agreement_start">Agreement start</label>
-            <input id="agreement_start" name="agreement_start" type="date" required>
-          </div>
-          <div>
-            <label for="agreement_end">Agreement end (11 months later)</label>
-            <input id="agreement_end" name="agreement_end" type="date" required>
-          </div>
-          <div>
-            <label for="security_deposit">Security deposit (₹)</label>
-            <input id="security_deposit" name="security_deposit" type="number" value="<%= flat.rent_amount %>">
-          </div>
-        </div>
-        <p class="hint">Saving this creates the tenant's login (flat code + a generated password) and emails it to them automatically.</p>
-        <div class="btn-row">
-          <button class="btn" type="submit">Save tenant & send login email</button>
-        </div>
-      </form>
-    </div>
-  <% } else { %>
-
-    <div class="card-row">
-      <div class="card">
-        <h3>Tenant</h3>
-        <p><strong><%= tenant.full_name %></strong><br>
-        <%= tenant.phone %><% if (tenant.email) { %> · <%= tenant.email %><% } %></p>
-        <p class="hint">Agreement: <%= tenant.agreement_start %> → <%= tenant.agreement_end %></p>
-        <p class="hint">Security deposit: <%= formatINR(tenant.security_deposit) %></p>
-        <form method="POST" action="/admin/flats/<%= flat.id %>/vacate" onsubmit="return confirm('Mark this tenant as moved out?')">
-          <input type="hidden" name="tenant_id" value="<%= tenant.id %>">
-          <button class="btn btn-secondary btn-sm" type="submit" style="margin-top:10px">Mark as vacated</button>
-        </form>
+  <div class="layout-grid">
+    <section class="card">
+      <div class="section-head">
+        <h2>Current tenant</h2>
       </div>
 
-      <div class="card">
-        <h3>Police verification</h3>
-        <p>
-          <% if (tenant.police_verification_status === 'verified') { %>
-            <span class="badge badge-success">Verified</span>
-          <% } else if (tenant.police_verification_status === 'submitted') { %>
-            <span class="badge badge-warning">Submitted, awaiting result</span>
-          <% } else { %>
-            <span class="badge badge-danger">Pending</span>
-          <% } %>
-        </p>
-        <form method="POST" action="/admin/flats/<%= flat.id %>/police-verification">
-          <input type="hidden" name="tenant_id" value="<%= tenant.id %>">
-          <label for="status">Status</label>
-          <select id="status" name="status">
-            <option value="pending" <%= tenant.police_verification_status === 'pending' ? 'selected' : '' %>>Pending</option>
-            <option value="submitted" <%= tenant.police_verification_status === 'submitted' ? 'selected' : '' %>>Submitted</option>
-            <option value="verified" <%= tenant.police_verification_status === 'verified' ? 'selected' : '' %>>Verified</option>
-          </select>
-          <label for="ack_no">Acknowledgment number</label>
-          <input id="ack_no" name="ack_no" value="<%= tenant.police_verification_ack_no || '' %>">
-          <label for="date">Date</label>
-          <input id="date" name="date" type="date" value="<%= tenant.police_verification_date || '' %>">
-          <div class="btn-row"><button class="btn btn-sm" type="submit">Update</button></div>
-        </form>
-      </div>
+      <% if (tenant) { %>
+        <div class="tenant-card">
+          <div class="tenant-main">
+            <h3><%= tenant.full_name %></h3>
+            <p><strong>Phone:</strong> <%= tenant.phone %> <% if (tenant.alt_phone) { %> / <%= tenant.alt_phone %> <% } %></p>
+            <p><strong>Email:</strong> <%= tenant.email || '-' %></p>
+            <p><strong>Status:</strong> <%= tenant.lifecycle_status || (tenant.is_active ? 'active' : 'inactive') %></p>
+            <p><strong>Move in:</strong> <%= tenant.move_in_date || tenant.agreement_start || '-' %></p>
+            <p><strong>Agreement:</strong> <%= tenant.agreement_start || '-' %> to <%= tenant.agreement_end || '-' %></p>
+            <p><strong>Security deposit:</strong> <%= formatINR(tenant.security_deposit || 0) %></p>
+            <p><strong>GST:</strong> <%= tenant.gst_registered ? `Registered (${tenant.gstin || 'No GSTIN'})` : 'Not registered' %></p>
+            <p><strong>PAN:</strong> <%= tenant.pan_number || '-' %></p>
+            <p><strong>Aadhaar:</strong> <%= tenant.aadhaar_number || '-' %></p>
+          </div>
 
-      <div class="card">
-        <h3>Documents</h3>
-        <p class="hint">Paste this tenant's Google Drive folder link (agreement scan, ID proofs, photos).</p>
-        <form method="POST" action="/admin/flats/<%= flat.id %>/drive-link">
-          <input type="hidden" name="tenant_id" value="<%= tenant.id %>">
-          <input name="drive_folder_link" value="<%= tenant.drive_folder_link || '' %>" placeholder="https://drive.google.com/...">
-          <div class="btn-row"><button class="btn btn-sm" type="submit">Save link</button></div>
-        </form>
-        <% if (tenant.drive_folder_link) { %>
-          <p style="margin-top:10px"><a href="<%= tenant.drive_folder_link %>" target="_blank">Open folder →</a></p>
-        <% } %>
-      </div>
-    </div>
+          <div class="action-panels">
+            <form method="post" action="/admin/flats/<%= flat.id %>/reset-password" class="inline-card">
+              <h4>Reset password</h4>
+              <input type="hidden" name="tenant_id" value="<%= tenant.id %>">
+              <label>Reason</label>
+              <input type="text" name="reason" placeholder="No email, forgot password, admin support...">
+              <p class="hint">Default reset password: <strong>Rental@<%= flat.flat_code %></strong></p>
+              <button type="submit" class="btn btn-secondary">Reset Password</button>
+            </form>
 
-    <div class="card">
-      <h3>Payment history</h3>
-      <% if (payments.length === 0) { %>
-        <p class="empty">No payments submitted yet.</p>
+            <form method="post" action="/admin/flats/<%= flat.id %>/vacate" class="inline-card" onsubmit="return confirm('Mark this flat vacant and close the current tenancy?');">
+              <h4>Vacate flat</h4>
+              <input type="hidden" name="tenant_id" value="<%= tenant.id %>">
+              <label>Move out date</label>
+              <input type="date" name="move_out_date" required>
+              <button type="submit" class="btn btn-danger">Mark Vacant</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="sub-grid">
+          <form method="post" action="/admin/flats/<%= flat.id %>/police-verification" class="card form-card">
+            <h3>Police verification</h3>
+            <input type="hidden" name="tenant_id" value="<%= tenant.id %>">
+            <label>Status</label>
+            <select name="status">
+              <option value="pending" <%= tenant.police_verification_status === 'pending' ? 'selected' : '' %>>Pending</option>
+              <option value="submitted" <%= tenant.police_verification_status === 'submitted' ? 'selected' : '' %>>Submitted</option>
+              <option value="verified" <%= tenant.police_verification_status === 'verified' ? 'selected' : '' %>>Verified</option>
+            </select>
+            <label>Ack No.</label>
+            <input type="text" name="ack_no" value="<%= tenant.police_verification_ack_no || '' %>">
+            <label>Date</label>
+            <input type="date" name="date" value="<%= tenant.police_verification_date ? new Date(tenant.police_verification_date).toISOString().slice(0,10) : '' %>">
+            <button type="submit" class="btn btn-primary">Save Verification</button>
+          </form>
+
+          <form method="post" action="/admin/flats/<%= flat.id %>/drive-link" class="card form-card">
+            <h3>Drive folder</h3>
+            <input type="hidden" name="tenant_id" value="<%= tenant.id %>">
+            <label>Folder Link</label>
+            <input type="url" name="drive_folder_link" value="<%= tenant.drive_folder_link || '' %>" placeholder="https://drive.google.com/...">
+            <button type="submit" class="btn btn-primary">Save Link</button>
+            <% if (tenant.drive_folder_link) { %>
+              <a class="link-btn" href="<%= tenant.drive_folder_link %>" target="_blank" rel="noopener noreferrer">Open current folder</a>
+            <% } %>
+          </form>
+        </div>
+
+        <div class="sub-grid">
+          <form method="post" action="/admin/dues" class="card form-card">
+            <h3>Add due</h3>
+            <input type="hidden" name="tenant_id" value="<%= tenant.id %>">
+            <label>Due type</label>
+            <select name="due_type">
+              <option value="rent">Rent</option>
+              <option value="electricity">Electricity</option>
+              <option value="water">Water</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="security">Security</option>
+              <option value="penalty">Penalty</option>
+              <option value="damage">Damage</option>
+              <option value="parking">Parking</option>
+              <option value="other">Other</option>
+            </select>
+            <label>Custom label</label>
+            <input type="text" name="custom_label" placeholder="Water tanker, club dues, etc.">
+            <label>Amount</label>
+            <input type="number" step="0.01" name="due_amount" required>
+            <label>Due date</label>
+            <input type="date" name="due_date">
+            <label>For month</label>
+            <input type="month" name="for_month">
+            <label>Notes</label>
+            <textarea name="notes" rows="2"></textarea>
+            <button type="submit" class="btn btn-primary">Create Due</button>
+          </form>
+
+          <section class="card form-card">
+            <h3>Agreement</h3>
+            <p class="hint">Tenant agreement print route is available for review and PDF generation.</p>
+            <a class="btn btn-secondary link-as-btn" href="/tenant/agreement-print/<%= tenant.id %>" target="_blank" rel="noopener noreferrer">Open Agreement Preview</a>
+            <% if (appBaseUrl) { %>
+              <p class="hint">Base URL: <%= appBaseUrl %></p>
+            <% } %>
+          </section>
+        </div>
       <% } else { %>
-        <div class="table-wrap">
-        <table>
-          <thead><tr><th>Month</th><th class="num">Due</th><th class="num">Paid</th><th class="num">Late fee</th><th>Reference</th><th>Status</th></tr></thead>
-          <tbody>
-          <% payments.forEach(p => { %>
-            <tr>
-              <td><%= p.for_month %></td>
-              <td class="num mono"><%= formatINR(p.rent_due) %></td>
-              <td class="num mono"><%= p.amount_paid ? formatINR(p.amount_paid) : '-' %></td>
-              <td class="num mono"><%= p.late_fee ? formatINR(p.late_fee) : '-' %></td>
-              <td class="mono"><%= p.reference_no || '-' %></td>
-              <td>
-                <% if (p.status === 'confirmed') { %><span class="badge badge-success">Confirmed</span>
-                <% } else { %><span class="badge badge-warning">Pending</span><% } %>
-              </td>
-            </tr>
-          <% }) %>
-          </tbody>
-        </table>
+        <div class="empty-block">
+          <p>No active tenant is assigned to this flat.</p>
         </div>
       <% } %>
-      <p class="hint" style="margin-top:14px">Confirm or review pending payments from the <a href="/admin/payments">Payments</a> page.</p>
-    </div>
+    </section>
 
-    <div class="card">
-      <h3>Maintenance requests</h3>
-      <% if (maintenance.length === 0) { %>
-        <p class="empty">No requests raised yet.</p>
+    <aside class="card">
+      <div class="section-head">
+        <h2>Occupancy history</h2>
+      </div>
+      <% if (!occupancyHistory || !occupancyHistory.length) { %>
+        <p class="hint">No move-in or move-out history recorded yet.</p>
       <% } else { %>
-        <table>
-          <tbody>
-          <% maintenance.forEach(m => { %>
-            <tr><td><%= m.issue_type %></td><td><%= m.priority %></td><td><%= m.status %></td></tr>
+        <div class="history-list">
+          <% occupancyHistory.forEach((row) => { %>
+            <div class="history-item">
+              <strong><%= row.full_name %></strong>
+              <small>Move in: <%= row.move_in_date || '-' %></small>
+              <small>Move out: <%= row.move_out_date || 'Active / pending' %></small>
+            </div>
           <% }) %>
-          </tbody>
-        </table>
+        </div>
       <% } %>
-    </div>
 
-  <% } %>
-</div>
-</body>
-</html>
+      <% if (tenant && payments && payments.length) { %>
+        <div class="section-head top-gap">
+          <h2>Recent payments</h2>
+        </div>
+        <div class="history-list">
+          <% payments.slice(0, 8).forEach((p) => { %>
+            <div class="history-item">
+              <strong><%= p.for_month %></strong>
+              <small><%= formatINR(p.amount_paid || 0) %> • <%= p.status %></small>
+              <small><%= p.receipt_no || 'No receipt yet' %></small>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+
+      <% if (tenant && maintenance && maintenance.length) { %>
+        <div class="section-head top-gap">
+          <h2>Maintenance</h2>
+        </div>
+        <div class="history-list">
+          <% maintenance.slice(0, 8).forEach((m) => { %>
+            <div class="history-item">
+              <strong><%= m.issue_type || 'Issue' %></strong>
+              <small><%= m.priority %> priority</small>
+              <small>Status: <%= m.status %></small>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </aside>
+  </div>
+</section>
+
+<style>
+  .container { max-width: 1240px; margin: 0 auto; padding: 24px 16px 40px; }
+  .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+  .page-header h1 { margin: 0 0 8px; }
+  .page-header p { margin: 0; color: #6b7280; }
+  .header-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .layout-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+  .sub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px; }
+  .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .section-head h2 { margin: 0; font-size: 1.1rem; }
+  .tenant-card { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; }
+  .tenant-main h3 { margin-top: 0; margin-bottom: 12px; }
+  .tenant-main p { margin: 0 0 8px; }
+  .action-panels { display: grid; gap: 12px; }
+  .inline-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fafafa; }
+  .inline-card h4, .form-card h3 { margin-top: 0; margin-bottom: 10px; }
+  .form-card label, .inline-card label { display: block; font-size: 12px; font-weight: 700; color: #4b5563; margin-bottom: 6px; }
+  .form-card input, .form-card select, .form-card textarea, .inline-card input { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font: inherit; margin-bottom: 10px; }
+  .btn { border: 0; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 700; display: inline-block; text-decoration: none; }
+  .btn-primary { background: #111827; color: #fff; }
+  .btn-secondary { background: #f3f4f6; color: #111827; }
+  .btn-danger { background: #b91c1c; color: #fff; }
+  .link-as-btn { text-align: center; }
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: capitalize; }
+  .badge-success { background: #dcfce7; color: #166534; }
+  .badge-muted { background: #e5e7eb; color: #374151; }
+  .rent-chip { background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+  .history-list { display: grid; gap: 10px; }
+  .history-item { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fafafa; }
+  .history-item small { display: block; color: #6b7280; margin-top: 4px; }
+  .hint { color: #6b7280; margin: 0 0 10px; }
+  .empty-block { padding: 20px; border: 1px dashed #d1d5db; border-radius: 12px; background: #fafafa; }
+  .top-gap { margin-top: 16px; }
+  .link-btn { color: #2563eb; text-decoration: none; font-weight: 600; }
+  @media (max-width: 1000px) {
+    .layout-grid, .tenant-card, .sub-grid { grid-template-columns: 1fr; }
+  }
+</style>
