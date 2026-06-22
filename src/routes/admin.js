@@ -162,6 +162,10 @@ router.get('/dashboard', async (req, res) => {
      ORDER BY m.created_at DESC LIMIT 10`
   );
 
+  const [recentExpenses] = await pool.query(
+    `SELECT * FROM office_expenses ORDER BY expense_date DESC LIMIT 10`
+  );
+
   res.render('admin/dashboard', {
     totalFlats,
     occupied,
@@ -177,18 +181,30 @@ router.get('/dashboard', async (req, res) => {
     officeExpenseThisMonth,
     pvPending,
     openMaint,
+    expenses: recentExpenses,
     formatINR,
   });
 });
 
 // ---------- Flats ----------
 router.get('/flats', async (req, res) => {
-  const [flats] = await pool.query(
-    `SELECT f.*, t.full_name, t.id AS tenant_id, t.lifecycle_status
+  const [[{ hasLifecycleColumn }]] = await pool.query(
+    `SELECT COUNT(*) AS hasLifecycleColumn
+     FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = 'tenants' AND column_name = 'lifecycle_status'`
+  );
+
+  const sql = hasLifecycleColumn
+    ? `SELECT f.*, t.full_name, t.id AS tenant_id, t.lifecycle_status
      FROM flats f
      LEFT JOIN tenants t ON t.flat_id = f.id AND t.is_active = 1
      ORDER BY f.flat_code`
-  );
+    : `SELECT f.*, t.full_name, t.id AS tenant_id, 'active' AS lifecycle_status
+     FROM flats f
+     LEFT JOIN tenants t ON t.flat_id = f.id AND t.is_active = 1
+     ORDER BY f.flat_code`;
+
+  const [flats] = await pool.query(sql);
   res.render('admin/flats', { flats, formatINR });
 });
 
@@ -206,6 +222,29 @@ router.post('/flats', async (req, res) => {
     res.redirect('/admin/flats');
   } catch (err) {
     res.render('admin/flat-new', { error: 'Could not save - is that flat code already in use?' });
+  }
+});
+
+router.get('/flats/:id/edit', async (req, res) => {
+  const [[flat]] = await pool.query('SELECT * FROM flats WHERE id = ?', [req.params.id]);
+  if (!flat) return res.status(404).send('Flat not found');
+  res.render('admin/flat-edit', { flat, error: null });
+});
+
+router.post('/flats/:id/edit', async (req, res) => {
+  const flatId = req.params.id;
+  const { flat_code, tower, floor, unit, rent_amount } = req.body;
+  try {
+    await pool.query(
+      'UPDATE flats SET flat_code = ?, tower = ?, floor = ?, unit = ?, rent_amount = ? WHERE id = ?',
+      [flat_code.trim(), tower, floor, unit, parseAmount(rent_amount), flatId]
+    );
+    res.redirect('/admin/flats');
+  } catch (err) {
+    res.render('admin/flat-edit', { 
+      flat: { id: flatId, flat_code, tower, floor, unit, rent_amount },
+      error: 'Could not update - is that flat code already in use?' 
+    });
   }
 });
 
@@ -362,6 +401,64 @@ router.post('/flats/:id/tenant', async (req, res) => {
   }
 
   res.redirect(`/admin/flats/${flatId}`);
+});
+
+router.get('/flats/:id/tenant/:tenantId/edit', async (req, res) => {
+  const [[tenant]] = await pool.query(
+    'SELECT * FROM tenants WHERE id = ? AND flat_id = ?',
+    [req.params.tenantId, req.params.id]
+  );
+  if (!tenant) return res.status(404).send('Tenant not found');
+  res.render('admin/tenant-edit', { tenant, flatId: req.params.id, error: null });
+});
+
+router.post('/flats/:id/tenant/:tenantId/edit', async (req, res) => {
+  const tenantId = req.params.tenantId;
+  const flatId = req.params.id;
+  const {
+    full_name, father_husband_name, phone, alt_phone, email,
+    permanent_address, aadhaar_number, pan_number,
+    agreement_start, agreement_end, security_deposit,
+    move_in_date, gst_registered, gstin, is_active, lifecycle_status,
+  } = req.body;
+
+  try {
+    await pool.query(
+      `UPDATE tenants
+       SET full_name = ?, father_husband_name = ?, phone = ?, alt_phone = ?, email = ?,
+           permanent_address = ?, aadhaar_number = ?, pan_number = ?,
+           agreement_start = ?, agreement_end = ?, security_deposit = ?,
+           move_in_date = ?, gst_registered = ?, gstin = ?,
+           is_active = ?, lifecycle_status = ?
+       WHERE id = ?`,
+      [
+        full_name,
+        normalizeOptional(father_husband_name),
+        phone,
+        normalizeOptional(alt_phone),
+        normalizeOptional(email),
+        normalizeOptional(permanent_address),
+        normalizeOptional(aadhaar_number),
+        normalizeOptional(pan_number),
+        agreement_start || null,
+        agreement_end || null,
+        parseAmount(security_deposit),
+        move_in_date || null,
+        gst_registered ? 1 : 0,
+        normalizeOptional(gstin),
+        is_active ? 1 : 0,
+        lifecycle_status || 'active',
+        tenantId,
+      ]
+    );
+    res.redirect(`/admin/flats/${flatId}`);
+  } catch (err) {
+    res.render('admin/tenant-edit', {
+      tenant: { id: tenantId, full_name, father_husband_name, phone, alt_phone, email, permanent_address, aadhaar_number, pan_number, agreement_start, agreement_end, security_deposit, move_in_date, gst_registered, gstin, is_active, lifecycle_status },
+      flatId,
+      error: 'Could not update tenant details.',
+    });
+  }
 });
 
 router.post('/flats/:id/police-verification', async (req, res) => {
@@ -628,6 +725,65 @@ router.post('/payments/:id/update', async (req, res) => {
   res.redirect('/admin/payments');
 });
 
+router.get('/dues/:id/edit', async (req, res) => {
+  const [[due]] = await pool.query('SELECT * FROM dues WHERE id = ?', [req.params.id]);
+  if (!due) return res.status(404).send('Due not found');
+  res.render('admin/due-edit', { due, error: null });
+});
+
+router.post('/dues/:id/edit', async (req, res) => {
+  const dueId = req.params.id;
+  const { due_type, custom_label, due_amount, due_date, for_month, notes, status } = req.body;
+  try {
+    const [[existing]] = await pool.query('SELECT * FROM dues WHERE id = ?', [dueId]);
+    await pool.query(
+      `UPDATE dues
+       SET due_type = ?, custom_label = ?, due_amount = ?, due_date = ?, for_month = ?, notes = ?, status = ?
+       WHERE id = ?`,
+      [
+        due_type,
+        normalizeOptional(custom_label),
+        parseAmount(due_amount),
+        due_date || null,
+        normalizeOptional(for_month),
+        normalizeOptional(notes),
+        status || 'current',
+        dueId,
+      ]
+    );
+    await writeAuditLog({
+      tableName: 'dues',
+      recordId: parseInt(dueId),
+      action: 'update',
+      changedBy: req.user.id,
+      oldValues: existing,
+      newValues: { due_type, custom_label, due_amount: parseAmount(due_amount), status: status || 'current' },
+      ipAddress: req.ip,
+    });
+    res.redirect('back');
+  } catch (err) {
+    res.render('admin/due-edit', { 
+      due: { id: dueId, due_type, custom_label, due_amount, due_date, for_month, notes },
+      error: 'Could not update due.' 
+    });
+  }
+});
+
+router.post('/dues/:id/delete', async (req, res) => {
+  const dueId = req.params.id;
+  const [[existing]] = await pool.query('SELECT * FROM dues WHERE id = ?', [dueId]);
+  await pool.query('DELETE FROM dues WHERE id = ?', [dueId]);
+  await writeAuditLog({
+    tableName: 'dues',
+    recordId: parseInt(dueId),
+    action: 'delete',
+    changedBy: req.user.id,
+    oldValues: existing,
+    ipAddress: req.ip,
+  });
+  res.redirect('back');
+});
+
 router.post('/dues', async (req, res) => {
   const { tenant_id, due_type, custom_label, due_amount, due_date, for_month, notes } = req.body;
   await pool.query(
@@ -647,6 +803,69 @@ router.post('/dues', async (req, res) => {
     ]
   );
   res.redirect('back');
+});
+
+router.get('/expenses/:id/edit', async (req, res) => {
+  const [[expense]] = await pool.query('SELECT * FROM office_expenses WHERE id = ?', [req.params.id]);
+  if (!expense) return res.status(404).send('Expense not found');
+  res.render('admin/expense-edit', { expense, error: null });
+});
+
+router.post('/expenses/:id/edit', async (req, res) => {
+  const expenseId = req.params.id;
+  const { category, description, amount, expense_date, payment_mode, reference_no } = req.body;
+  try {
+    const [[existing]] = await pool.query('SELECT * FROM office_expenses WHERE id = ?', [expenseId]);
+    await pool.query(
+      `UPDATE office_expenses
+       SET category = ?, description = ?, amount = ?, expense_date = ?, payment_mode = ?, reference_no = ?
+       WHERE id = ?`,
+      [
+        category || 'misc',
+        normalizeOptional(description),
+        parseAmount(amount),
+        expense_date || new Date().toISOString().slice(0, 10),
+        normalizeOptional(payment_mode),
+        normalizeOptional(reference_no),
+        expenseId,
+      ]
+    );
+    await pool.query(
+      `UPDATE ledger SET amount = ?, description = ?, txn_date = ? WHERE expense_id = ? AND ref_table = 'office_expenses'`,
+      [parseAmount(amount), normalizeOptional(description), expense_date || new Date().toISOString().slice(0, 10), expenseId]
+    );
+    await writeAuditLog({
+      tableName: 'office_expenses',
+      recordId: parseInt(expenseId),
+      action: 'update',
+      changedBy: req.user.id,
+      oldValues: existing,
+      newValues: { category, amount: parseAmount(amount) },
+      ipAddress: req.ip,
+    });
+    res.redirect('/admin/dashboard');
+  } catch (err) {
+    res.render('admin/expense-edit', { 
+      expense: { id: expenseId, category, description, amount, expense_date, payment_mode, reference_no },
+      error: 'Could not update expense.' 
+    });
+  }
+});
+
+router.post('/expenses/:id/delete', async (req, res) => {
+  const expenseId = req.params.id;
+  const [[existing]] = await pool.query('SELECT * FROM office_expenses WHERE id = ?', [expenseId]);
+  await pool.query('DELETE FROM ledger WHERE expense_id = ? AND ref_table = "office_expenses"', [expenseId]);
+  await pool.query('DELETE FROM office_expenses WHERE id = ?', [expenseId]);
+  await writeAuditLog({
+    tableName: 'office_expenses',
+    recordId: parseInt(expenseId),
+    action: 'delete',
+    changedBy: req.user.id,
+    oldValues: existing,
+    ipAddress: req.ip,
+  });
+  res.redirect('/admin/dashboard');
 });
 
 router.post('/expenses', async (req, res) => {
@@ -695,6 +914,64 @@ router.get('/maintenance', async (req, res) => {
      ORDER BY m.created_at DESC`
   );
   res.render('admin/maintenance', { requests });
+});
+
+router.get('/maintenance/:id/edit', async (req, res) => {
+  const [[request]] = await pool.query(
+    `SELECT m.*, t.full_name, f.flat_code
+     FROM maintenance_requests m
+     JOIN tenants t ON t.id = m.tenant_id
+     JOIN flats f ON f.id = t.flat_id
+     WHERE m.id = ?`,
+    [req.params.id]
+  );
+  if (!request) return res.status(404).send('Maintenance request not found');
+  res.render('admin/maintenance-edit', { request, error: null });
+});
+
+router.post('/maintenance/:id/edit', async (req, res) => {
+  const requestId = req.params.id;
+  const { issue_type, description, priority, status } = req.body;
+  try {
+    const [[existing]] = await pool.query('SELECT * FROM maintenance_requests WHERE id = ?', [requestId]);
+    const resolvedAt = status === 'resolved' ? new Date() : null;
+    await pool.query(
+      `UPDATE maintenance_requests
+       SET issue_type = ?, description = ?, priority = ?, status = ?, resolved_at = ?
+       WHERE id = ?`,
+      [issue_type, description, priority, status, resolvedAt, requestId]
+    );
+    await writeAuditLog({
+      tableName: 'maintenance_requests',
+      recordId: parseInt(requestId),
+      action: 'update',
+      changedBy: req.user.id,
+      oldValues: existing,
+      newValues: { issue_type, priority, status },
+      ipAddress: req.ip,
+    });
+    res.redirect('/admin/maintenance');
+  } catch (err) {
+    res.render('admin/maintenance-edit', { 
+      request: { id: requestId, issue_type, description, priority, status },
+      error: 'Could not update maintenance request.' 
+    });
+  }
+});
+
+router.post('/maintenance/:id/delete', async (req, res) => {
+  const requestId = req.params.id;
+  const [[existing]] = await pool.query('SELECT * FROM maintenance_requests WHERE id = ?', [requestId]);
+  await pool.query('DELETE FROM maintenance_requests WHERE id = ?', [requestId]);
+  await writeAuditLog({
+    tableName: 'maintenance_requests',
+    recordId: parseInt(requestId),
+    action: 'delete',
+    changedBy: req.user.id,
+    oldValues: existing,
+    ipAddress: req.ip,
+  });
+  res.redirect('/admin/maintenance');
 });
 
 router.post('/maintenance/:id/status', async (req, res) => {

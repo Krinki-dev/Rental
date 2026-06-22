@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Edit Expense' }) %></head>
+<body>
+<%- include('../partials/admin-nav', { active: 'dashboard' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>Edit Expense</h1>
+    <p>Update office expense details</p>
+  </div>
+
+  <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+
+  <div class="card" style="max-width:560px">
+    <form method="POST" action="/admin/expenses/<%= expense.id %>/edit">
+      <label for="category">Category</label>
+      <select id="category" name="category">
+        <option value="staff_salary" <%= expense.category === 'staff_salary' ? 'selected' : '' %>>Staff Salary</option>
+        <option value="electricity" <%= expense.category === 'electricity' ? 'selected' : '' %>>Electricity</option>
+        <option value="internet" <%= expense.category === 'internet' ? 'selected' : '' %>>Internet</option>
+        <option value="office_rent" <%= expense.category === 'office_rent' ? 'selected' : '' %>>Office Rent</option>
+        <option value="repairs" <%= expense.category === 'repairs' ? 'selected' : '' %>>Repairs</option>
+        <option value="maintenance" <%= expense.category === 'maintenance' ? 'selected' : '' %>>Maintenance</option>
+        <option value="legal" <%= expense.category === 'legal' ? 'selected' : '' %>>Legal</option>
+        <option value="travel" <%= expense.category === 'travel' ? 'selected' : '' %>>Travel</option>
+        <option value="marketing" <%= expense.category === 'marketing' ? 'selected' : '' %>>Marketing</option>
+        <option value="misc" <%= expense.category === 'misc' ? 'selected' : '' %>>Misc</option>
+      </select>
+
+      <label for="description">Description</label>
+      <input id="description" name="description" value="<%= expense.description || '' %>" placeholder="Office internet bill, plumber payment, legal fee...">
+
+      <label for="amount">Amount (₹)</label>
+      <input id="amount" name="amount" type="number" step="0.01" required value="<%= expense.amount %>">
+
+      <div class="field-row">
+        <div>
+          <label for="expense_date">Expense Date</label>
+          <input id="expense_date" name="expense_date" type="date" required value="<%= expense.expense_date || '' %>">
+        </div>
+        <div>
+          <label for="payment_mode">Payment Mode</label>
+          <select id="payment_mode" name="payment_mode">
+            <option value="UPI" <%= expense.payment_mode === 'UPI' ? 'selected' : '' %>>UPI</option>
+            <option value="Bank Transfer" <%= expense.payment_mode === 'Bank Transfer' ? 'selected' : '' %>>Bank Transfer</option>
+            <option value="Cash" <%= expense.payment_mode === 'Cash' ? 'selected' : '' %>>Cash</option>
+            <option value="Cheque" <%= expense.payment_mode === 'Cheque' ? 'selected' : '' %>>Cheque</option>
+            <option value="Other" <%= expense.payment_mode === 'Other' ? 'selected' : '' %>>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="reference_no">Reference No.</label>
+      <input id="reference_no" name="reference_no" value="<%= expense.reference_no || '' %>" placeholder="Optional reference or UTR">
+
+      <div class="btn-row">
+        <button class="btn" type="submit">Update expense</button>
+        <a class="btn btn-secondary" href="/admin/dashboard">Cancel</a>
+      </div>
+    </form>
+
+    <form method="POST" action="/admin/expenses/<%= expense.id %>/delete" style="margin-top:16px;" onsubmit="return confirm('Delete this expense permanently? This will also remove the related ledger entry.');">
+      <button type="submit" class="btn btn-danger">Delete Expense</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

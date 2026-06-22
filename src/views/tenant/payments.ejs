@@ -127,6 +127,11 @@
                 <% if (p.receipt_no) { %>
                   <div class="muted">Receipt: <%= p.receipt_no %></div>
                 <% } %>
+                <% if (p.status !== 'confirmed') { %>
+                  <div style="margin-top:6px;">
+                    <a href="/tenant/payments/<%= p.id %>/edit" class="link-btn">Edit</a>
+                  </div>
+                <% } %>
                 <% if (items.length) { %>
                   <ul class="item-list">
                     <% items.forEach((item) => { %>

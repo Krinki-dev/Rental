@@ -9,99 +9,97 @@
     </div>
   </div>
 
-  <div class="stats-grid">
-    <article class="stat-card">
-      <span class="label">Total flats</span>
-      <strong><%= totalFlats %></strong>
-    </article>
-    <article class="stat-card">
-      <span class="label">Occupied</span>
-      <strong><%= occupied %></strong>
-      <small>Vacant: <%= vacant %></small>
-    </article>
-    <article class="stat-card accent-success">
-      <span class="label">Collected this month</span>
-      <strong><%= formatINR(collected) %></strong>
-    </article>
-    <article class="stat-card accent-warning">
-      <span class="label">Pending payments</span>
-      <strong><%= pendingCount %></strong>
-    </article>
-    <article class="stat-card accent-info">
-      <span class="label">Security held</span>
-      <strong><%= formatINR(securityHeld || 0) %></strong>
-      <small>Collected: <%= formatINR(securityCollectedThisMonth || 0) %> | Returned: <%= formatINR(securityReturnedThisMonth || 0) %></small>
-    </article>
-    <article class="stat-card accent-danger">
-      <span class="label">Electricity due</span>
-      <strong><%= formatINR(electricityDue || 0) %></strong>
-      <small>Water due: <%= formatINR(waterDue || 0) %></small>
-    </article>
-    <article class="stat-card accent-neutral">
-      <span class="label">Office expense this month</span>
-      <strong><%= formatINR(officeExpenseThisMonth || 0) %></strong>
-    </article>
-  </div>
-
   <div class="content-grid">
-    <section class="card">
-      <div class="section-head">
-        <h2>Police verification pending</h2>
-        <span><%= pvPending ? pvPending.length : 0 %> records</span>
+    <div class="main-column">
+      <div class="stats-grid">
+        <article class="stat-card">
+          <span class="label">Total flats</span>
+          <strong><%= totalFlats %></strong>
+        </article>
+        <article class="stat-card">
+          <span class="label">Occupied</span>
+          <strong><%= occupied %></strong>
+          <small>Vacant: <%= vacant %></small>
+        </article>
+        <article class="stat-card accent-success">
+          <span class="label">Collected this month</span>
+          <strong><%= formatINR(collected) %></strong>
+        </article>
+        <article class="stat-card accent-warning">
+          <span class="label">Pending payments</span>
+          <strong><%= pendingCount %></strong>
+        </article>
+        <article class="stat-card accent-info">
+          <span class="label">Security held</span>
+          <strong><%= formatINR(securityHeld || 0) %></strong>
+          <small>Collected: <%= formatINR(securityCollectedThisMonth || 0) %> | Returned: <%= formatINR(securityReturnedThisMonth || 0) %></small>
+        </article>
+        <article class="stat-card accent-danger">
+          <span class="label">Utilities due</span>
+          <strong><%= formatINR((electricityDue || 0) + (waterDue || 0)) %></strong>
+          <small>Elec: <%= formatINR(electricityDue || 0) %> | Water: <%= formatINR(waterDue || 0) %></small>
+        </article>
+        <article class="stat-card accent-neutral">
+          <span class="label">Office expense this month</span>
+          <strong><%= formatINR(officeExpenseThisMonth || 0) %></strong>
+        </article>
       </div>
-      <% if (!pvPending || !pvPending.length) { %>
-        <p class="empty-copy">All active tenants are verified.</p>
-      <% } else { %>
-        <div class="list-wrap">
-          <% pvPending.forEach((row) => { %>
-            <div class="list-item">
-              <div>
-                <strong><%= row.full_name %></strong>
-                <small>Flat <%= row.flat_code %></small>
-              </div>
-            </div>
-          <% }) %>
+      <section class="card">
+        <div class="section-head">
+          <h2>Quick actions</h2>
         </div>
-      <% } %>
-    </section>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Open maintenance</h2>
-        <a href="/admin/maintenance" class="link-btn">View all</a>
-      </div>
-      <% if (!openMaint || !openMaint.length) { %>
-        <p class="empty-copy">No open maintenance issues right now.</p>
-      <% } else { %>
-        <div class="list-wrap">
-          <% openMaint.forEach((m) => { %>
-            <div class="list-item split">
-              <div>
-                <strong><%= m.issue_type || 'Issue' %></strong>
-                <small><%= m.full_name %> • Flat <%= m.flat_code %></small>
-              </div>
-              <span class="badge <%= m.priority === 'high' ? 'badge-danger' : m.priority === 'medium' ? 'badge-warning' : 'badge-muted' %>">
-                <%= m.priority %>
-              </span>
-            </div>
-          <% }) %>
+        <div class="quick-links">
+          <a class="action-tile" href="/admin/flats">Manage flats</a>
+          <a class="action-tile" href="/admin/payments">Review payments</a>
+          <a class="action-tile" href="/admin/maintenance">Maintenance</a>
         </div>
-      <% } %>
-    </section>
-  </div>
-
-  <div class="content-grid bottom-grid">
-    <section class="card">
-      <div class="section-head">
-        <h2>Quick actions</h2>
-      </div>
-      <div class="quick-links">
-        <a class="action-tile" href="/admin/flats">Manage flats</a>
-        <a class="action-tile" href="/admin/payments">Review payments</a>
-        <a class="action-tile" href="/admin/maintenance">Maintenance</a>
-      </div>
-    </section>
-
+      </section>
+    </div>
+    <div class="side-column">
+      <section class="card">
+        <div class="section-head">
+          <h2>Police verification pending</h2>
+          <span><%= pvPending ? pvPending.length : 0 %> records</span>
+        </div>
+        <% if (!pvPending || !pvPending.length) { %>
+          <p class="empty-copy">All active tenants are verified.</p>
+        <% } else { %>
+          <div class="list-wrap">
+            <% pvPending.forEach((row) => { %>
+              <div class="list-item">
+                <div>
+                  <strong><%= row.full_name %></strong>
+                  <small>Flat <%= row.flat_code %></small>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </section>
+      <section class="card">
+        <div class="section-head">
+          <h2>Open maintenance</h2>
+          <a href="/admin/maintenance" class="link-btn">View all</a>
+        </div>
+        <% if (!openMaint || !openMaint.length) { %>
+          <p class="empty-copy">No open maintenance issues right now.</p>
+        <% } else { %>
+          <div class="list-wrap">
+            <% openMaint.forEach((m) => { %>
+              <div class="list-item split">
+                <div>
+                  <strong><%= m.issue_type || 'Issue' %></strong>
+                  <small><%= m.full_name %> • Flat <%= m.flat_code %></small>
+                </div>
+                <span class="badge <%= m.priority === 'high' ? 'badge-danger' : m.priority === 'medium' ? 'badge-warning' : 'badge-muted' %>">
+                  <%= m.priority %>
+                </span>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </section>
+    </div>
     <section class="card">
       <div class="section-head">
         <h2>Expense entry</h2>
@@ -153,26 +151,71 @@
         </div>
       </form>
     </section>
+
+    <section class="card" style="margin-top:20px;">
+      <div class="section-head">
+        <h2>Recent expenses</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="expenses-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th class="num">Amount</th>
+              <th>Mode</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% 
+            const recentExpenses = (typeof expenses !== 'undefined' && expenses) ? expenses.slice(0,10) : [];
+            %>
+            <% if (!recentExpenses.length) { %>
+              <tr><td colspan="6" class="empty-copy">No expenses recorded yet.</td></tr>
+            <% } else { %>
+              <% recentExpenses.forEach((e) => { %>
+                <tr>
+                  <td><%= e.expense_date || '-' %></td>
+                  <td><%= e.category %></td>
+                  <td><%= e.description || '-' %></td>
+                  <td class="num"><%= formatINR(e.amount) %></td>
+                  <td><%= e.payment_mode || '-' %></td>
+                  <td>
+                    <a href="/admin/expenses/<%= e.id %>/edit" class="link-btn">Edit</a>
+                    &nbsp;|&nbsp;
+                    <form method="POST" action="/admin/expenses/<%= e.id %>/delete" style="display:inline;" onsubmit="return confirm('Delete this expense?');">
+                      <button type="submit" class="btn btn-danger btn-sm" style="padding:4px 8px; font-size:12px;">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
 </section>
 
 <style>
   .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px 40px; }
   .page-header { margin-bottom: 20px; }
-  .page-header h1 { margin: 0 0 8px; }
-  .page-header p { margin: 0; color: #6b7280; }
-  .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .page-header h1 { margin: 0 0 8px; font-size: 1.5rem; }
+  .page-header p { margin: 0; color: #6b7280; font-size: 0.9rem; }
+  .stats-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
   .stat-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-  .stat-card strong { font-size: 1.5rem; }
+  .stat-card strong { font-size: 1.25rem; }
   .stat-card small, .label { color: #6b7280; }
   .accent-success { border-left: 4px solid #16a34a; }
   .accent-warning { border-left: 4px solid #d97706; }
   .accent-info { border-left: 4px solid #2563eb; }
   .accent-danger { border-left: 4px solid #dc2626; }
   .accent-neutral { border-left: 4px solid #4b5563; }
-  .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-  .bottom-grid { align-items: start; }
-  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px; }
+  .content-grid { display: grid; grid-template-columns: 1fr 0.8fr 0.8fr; gap: 20px; align-items: start; }
+  .main-column, .side-column { display: flex; flex-direction: column; gap: 20px; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px; width: 100%; }
   .section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
   .section-head h2 { margin: 0; font-size: 1.1rem; }
   .list-wrap { display: flex; flex-direction: column; gap: 10px; }
@@ -195,12 +238,11 @@
   .btn-primary { background: #111827; color: #fff; }
   .empty-copy { color: #6b7280; margin: 0; }
   @media (max-width: 1100px) {
-    .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .content-grid { grid-template-columns: 1fr 1fr; }
+    .content-grid > .card { grid-column: 1 / -1; } /* Expense form full width */
   }
   @media (max-width: 800px) {
-    .content-grid, .expense-form { grid-template-columns: 1fr; }
-  }
-  @media (max-width: 560px) {
-    .stats-grid { grid-template-columns: 1fr; }
+    .content-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 </style>

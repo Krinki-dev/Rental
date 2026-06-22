@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Edit Due' }) %></head>
+<body>
+<%- include('../partials/admin-nav', { active: 'flats' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>Edit Due</h1>
+    <p>Update due details</p>
+  </div>
+
+  <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+
+  <div class="card" style="max-width:560px">
+    <form method="POST" action="/admin/dues/<%= due.id %>/edit">
+      <label for="due_type">Due Type</label>
+      <select id="due_type" name="due_type">
+        <option value="rent" <%= due.due_type === 'rent' ? 'selected' : '' %>>Rent</option>
+        <option value="electricity" <%= due.due_type === 'electricity' ? 'selected' : '' %>>Electricity</option>
+        <option value="water" <%= due.due_type === 'water' ? 'selected' : '' %>>Water</option>
+        <option value="maintenance" <%= due.due_type === 'maintenance' ? 'selected' : '' %>>Maintenance</option>
+        <option value="security" <%= due.due_type === 'security' ? 'selected' : '' %>>Security</option>
+        <option value="penalty" <%= due.due_type === 'penalty' ? 'selected' : '' %>>Penalty</option>
+        <option value="damage" <%= due.due_type === 'damage' ? 'selected' : '' %>>Damage</option>
+        <option value="parking" <%= due.due_type === 'parking' ? 'selected' : '' %>>Parking</option>
+        <option value="other" <%= due.due_type === 'other' ? 'selected' : '' %>>Other</option>
+      </select>
+
+      <label for="custom_label">Custom Label</label>
+      <input id="custom_label" name="custom_label" value="<%= due.custom_label || '' %>" placeholder="e.g. Water tanker, club dues">
+
+      <label for="due_amount">Amount (₹)</label>
+      <input id="due_amount" name="due_amount" type="number" step="0.01" required value="<%= due.due_amount %>">
+
+      <div class="field-row">
+        <div>
+          <label for="due_date">Due Date</label>
+          <input id="due_date" name="due_date" type="date" value="<%= due.due_date || '' %>">
+        </div>
+        <div>
+          <label for="for_month">For Month</label>
+          <input id="for_month" name="for_month" type="month" value="<%= due.for_month || '' %>">
+        </div>
+      </div>
+
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        <option value="upcoming" <%= due.status === 'upcoming' ? 'selected' : '' %>>Upcoming</option>
+        <option value="current" <%= due.status === 'current' ? 'selected' : '' %>>Current</option>
+        <option value="overdue" <%= due.status === 'overdue' ? 'selected' : '' %>>Overdue</option>
+        <option value="paid" <%= due.status === 'paid' ? 'selected' : '' %>>Paid</option>
+      </select>
+
+      <label for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="2"><%= due.notes || '' %></textarea>
+
+      <div class="btn-row">
+        <button class="btn" type="submit">Update due</button>
+        <a class="btn btn-secondary" href="javascript:history.back()">Cancel</a>
+      </div>
+    </form>
+
+    <form method="POST" action="/admin/dues/<%= due.id %>/delete" style="margin-top:16px;" onsubmit="return confirm('Delete this due permanently?');">
+      <button type="submit" class="btn btn-danger">Delete Due</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

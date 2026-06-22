@@ -243,4 +243,7 @@ CREATE TABLE IF NOT EXISTS gst_invoices (
   status ENUM('draft','issued','cancelled') NOT NULL DEFAULT 'issued',
   created_by INT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_gst_tenant FOREIGN KEY (tenant_id) REFERENCES te
+  CONSTRAINT fk_gst_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+  CONSTRAINT fk_gst_payment FOREIGN KEY (payment_id) REFERENCES payments(id),
+  CONSTRAINT fk_gst_created_by FOREIGN KEY (created_by) REFERENCES users(id)
+) ENGINE=InnoDB;

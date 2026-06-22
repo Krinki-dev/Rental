@@ -22,7 +22,10 @@
       <% if (tenant) { %>
         <div class="tenant-card">
           <div class="tenant-main">
-            <h3><%= tenant.full_name %></h3>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px;">
+              <h3 style="margin:0;"><%= tenant.full_name %></h3>
+              <a class="btn btn-secondary btn-sm" href="/admin/flats/<%= flat.id %>/tenant/<%= tenant.id %>/edit">Edit Tenant</a>
+            </div>
             <p><strong>Phone:</strong> <%= tenant.phone %> <% if (tenant.alt_phone) { %> / <%= tenant.alt_phone %> <% } %></p>
             <p><strong>Email:</strong> <%= tenant.email || '-' %></p>
             <p><strong>Status:</strong> <%= tenant.lifecycle_status || (tenant.is_active ? 'active' : 'inactive') %></p>

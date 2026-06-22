@@ -250,8 +250,8 @@ router.post('/payments', async (req, res) => {
     } else {
       const [result] = await conn.query(
         `INSERT INTO payments
-         (tenant_id, idempotency_key, for_month, rent_due, amount_paid, payment_date, mode, reference_no, notes, status, payment_source, created_by_user_id)
-         VALUES (?,?,?,?,?,?,?,?,?,'pending','tenant',?)`,
+         (tenant_id, idempotency_key, for_month, rent_due, amount_paid, payment_date, mode, reference_no, notes, status, payment_source, created_by_user_id, updated_by_user_id)
+         VALUES (?,?,?,?,?,?,?,?,?,'pending','tenant',?,?)`,
         [
           tenant.id,
           idempotencyKey,
@@ -311,6 +311,123 @@ router.post('/payments', async (req, res) => {
   }
 });
 
+router.get('/payments/:id/edit', async (req, res) => {
+  const tenant = await getTenantByUserId(req.user.id);
+  if (!ensureTenantCanLogin(tenant, res)) return;
+
+  const [[payment]] = await pool.query(
+    'SELECT * FROM payments WHERE id = ? AND tenant_id = ?',
+    [req.params.id, tenant.id]
+  );
+  if (!payment) return res.status(404).send('Payment not found');
+  if (payment.status === 'confirmed') return res.status(400).send('Confirmed payments cannot be edited.');
+
+  const [items] = await pool.query(
+    'SELECT * FROM payment_items WHERE payment_id = ? ORDER BY id ASC',
+    [payment.id]
+  );
+
+  res.render('tenant/payment-edit', { payment, items, error: null });
+});
+
+router.post('/payments/:id/edit', async (req, res) => {
+  const tenant = await getTenantByUserId(req.user.id);
+  if (!ensureTenantCanLogin(tenant, res)) return;
+
+  const paymentId = req.params.id;
+  const { for_month, amount_paid, payment_date, mode, reference_no, notes } = req.body;
+  const purposes = toArray(req.body.item_purpose);
+  const labels = toArray(req.body.item_label);
+  const amounts = toArray(req.body.item_amount);
+
+  const totalAmount = parseAmount(amount_paid);
+  if (!for_month || !payment_date || !mode || totalAmount <= 0) {
+    return res.status(400).send('Month, payment date, mode, and paid amount are required.');
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [[existing]] = await conn.query(
+      'SELECT * FROM payments WHERE id = ? AND tenant_id = ? FOR UPDATE',
+      [paymentId, tenant.id]
+    );
+    if (!existing) {
+      await conn.rollback();
+      return res.status(404).send('Payment not found');
+    }
+    if (existing.status === 'confirmed') {
+      await conn.rollback();
+      return res.status(400).send('Confirmed payments cannot be edited.');
+    }
+
+    const idempotencyKey = buildIdempotencyKey(tenant.id, for_month, payment_date, totalAmount, normalizeOptional(reference_no));
+
+    await conn.query(
+      `UPDATE payments
+       SET for_month = ?, amount_paid = ?, payment_date = ?, mode = ?, reference_no = ?, notes = ?,
+           updated_by_user_id = ?, updated_at = NOW(), idempotency_key = ?
+       WHERE id = ?`,
+      [
+        for_month,
+        totalAmount,
+        payment_date,
+        mode,
+        normalizeOptional(reference_no),
+        normalizeOptional(notes),
+        req.user.id,
+        idempotencyKey,
+        paymentId,
+      ]
+    );
+
+    await conn.query('DELETE FROM payment_items WHERE payment_id = ?', [paymentId]);
+
+    let insertedItemTotal = 0;
+    for (let i = 0; i < Math.max(purposes.length, amounts.length); i += 1) {
+      const purpose = normalizeOptional(purposes[i]) || 'rent';
+      const label = normalizeOptional(labels[i]);
+      const amount = parseAmount(amounts[i]);
+      if (amount <= 0) continue;
+      insertedItemTotal += amount;
+      await conn.query(
+        `INSERT INTO payment_items (payment_id, purpose, custom_label, amount)
+         VALUES (?,?,?,?)`,
+        [paymentId, purpose, label, amount]
+      );
+    }
+
+    if (insertedItemTotal <= 0) {
+      await conn.query(
+        `INSERT INTO payment_items (payment_id, purpose, custom_label, amount)
+         VALUES (?, 'rent', NULL, ?)`,
+        [paymentId, totalAmount]
+      );
+    }
+
+    await writeAuditLog({
+      tableName: 'payments',
+      recordId: parseInt(paymentId),
+      action: 'update',
+      changedBy: req.user.id,
+      changedByRole: 'tenant',
+      oldValues: existing,
+      newValues: { for_month, amount_paid: totalAmount, payment_date, mode },
+      ipAddress: req.ip,
+    });
+
+    await conn.commit();
+    res.redirect('/tenant/payments');
+  } catch (err) {
+    await conn.rollback();
+    console.error(err);
+    res.status(500).send('Could not update payment.');
+  } finally {
+    conn.release();
+  }
+});
+
 router.get('/maintenance', async (req, res) => {
   const tenant = await getTenantByUserId(req.user.id);
   if (!ensureTenantCanLogin(tenant, res)) return;
@@ -332,6 +449,49 @@ router.post('/maintenance', async (req, res) => {
     [tenant.id, issue_type, description, priority || 'medium']
   );
   res.redirect('/tenant/maintenance');
+});
+
+router.get('/maintenance/:id/edit', async (req, res) => {
+  const tenant = await getTenantByUserId(req.user.id);
+  if (!ensureTenantCanLogin(tenant, res)) return;
+
+  const [[request]] = await pool.query(
+    'SELECT * FROM maintenance_requests WHERE id = ? AND tenant_id = ?',
+    [req.params.id, tenant.id]
+  );
+  if (!request) return res.status(404).send('Request not found');
+  res.render('tenant/maintenance-edit', { request, error: null });
+});
+
+router.post('/maintenance/:id/edit', async (req, res) => {
+  const tenant = await getTenantByUserId(req.user.id);
+  if (!ensureTenantCanLogin(tenant, res)) return;
+
+  const requestId = req.params.id;
+  const { issue_type, description, priority } = req.body;
+  try {
+    await pool.query(
+      `UPDATE maintenance_requests
+       SET issue_type = ?, description = ?, priority = ?
+       WHERE id = ? AND tenant_id = ?`,
+      [issue_type, description, priority, requestId, tenant.id]
+    );
+    await writeAuditLog({
+      tableName: 'maintenance_requests',
+      recordId: parseInt(requestId),
+      action: 'update',
+      changedBy: req.user.id,
+      changedByRole: 'tenant',
+      newValues: { issue_type, priority },
+      ipAddress: req.ip,
+    });
+    res.redirect('/tenant/maintenance');
+  } catch (err) {
+    res.render('tenant/maintenance-edit', { 
+      request: { id: requestId, issue_type, description, priority },
+      error: 'Could not update request.' 
+    });
+  }
 });
 
 router.get('/agreement', async (req, res) => {

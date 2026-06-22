@@ -32,7 +32,10 @@
             <% } %>
           </td>
           <td><%= f.full_name || '-' %></td>
-          <td><a href="/admin/flats/<%= f.id %>">Open →</a></td>
+          <td>
+            <a href="/admin/flats/<%= f.id %>/edit">Edit</a> &nbsp;|&nbsp;
+            <a href="/admin/flats/<%= f.id %>">Open →</a>
+          </td>
         </tr>
         <% }) %>
       </tbody>

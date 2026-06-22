@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Edit Maintenance Request' }) %></head>
+<body>
+<%- include('../partials/tenant-nav', { active: 'maintenance' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>Edit Maintenance Request</h1>
+    <p>Update your maintenance request</p>
+  </div>
+
+  <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+
+  <div class="card" style="max-width:560px">
+    <form method="POST" action="/tenant/maintenance/<%= request.id %>/edit">
+      <label for="issue_type">Issue Type</label>
+      <input id="issue_type" name="issue_type" required value="<%= request.issue_type %>" placeholder="e.g. Tap leaking, fan not working">
+
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="3"><%= request.description || '' %></textarea>
+
+      <label for="priority">Priority</label>
+      <select id="priority" name="priority">
+        <option value="low" <%= request.priority === 'low' ? 'selected' : '' %>>Low</option>
+        <option value="medium" <%= request.priority === 'medium' ? 'selected' : '' %>>Medium</option>
+        <option value="high" <%= request.priority === 'high' ? 'selected' : '' %>>High</option>
+      </select>
+
+      <div class="btn-row">
+        <button class="btn" type="submit">Update request</button>
+        <a class="btn btn-secondary" href="/tenant/maintenance">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+</body>
+</html>
