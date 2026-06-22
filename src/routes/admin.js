@@ -510,7 +510,7 @@ router.post('/payments/:id/confirm', async (req, res) => {
     const lateFee = calculateLateFee(payment.for_month, payment.payment_date);
     const transactionHash = payment.transaction_hash || buildTransactionHash(payment);
     const existingByHash = await conn.query(
-      'SELECT id, receipt_no FROM payments WHERE transaction_hash = ? AND id != ? LIMIT 1',
+      'SELECT id, receipt_no FROM payments WHERE transaction_hash = ? AND id != ? LIMIT 1 FOR UPDATE',
       [transactionHash, paymentId]
     );
     if (existingByHash[0].length) {

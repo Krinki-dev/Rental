@@ -32,6 +32,27 @@ function buildIdempotencyKey(tenantId, forMonth, paymentDate, amount, referenceN
     .digest('hex');
 }
 
+async function writeAuditLog({ tableName, recordId, action, changedBy, changedByRole = 'tenant', oldValues = null, newValues = null, ipAddress = null }) {
+  try {
+    await pool.query(
+      `INSERT INTO audit_log
+      (table_name, record_id, action, changed_by, changed_by_role, old_values, new_values, ip_address)
+      VALUES (?,?,?,?,?,?,?,?)`,
+      [
+        tableName,
+        recordId,
+        action,
+        changedBy || null,
+        changedByRole,
+        oldValues ? JSON.stringify(oldValues) : null,
+        newValues ? JSON.stringify(newValues) : null,
+        ipAddress || null,
+      ]
+    );
+  } catch (_) {
+  }
+}
+
 async function safeQuery(sql, params = [], fallback = []) {
   try {
     const [rows] = await pool.query(sql, params);
@@ -190,7 +211,7 @@ router.post('/payments', async (req, res) => {
     await conn.beginTransaction();
 
     const [[existingKey]] = await conn.query(
-      'SELECT id FROM payments WHERE idempotency_key = ? LIMIT 1',
+      'SELECT id FROM payments WHERE idempotency_key = ? LIMIT 1 FOR UPDATE',
       [idempotencyKey]
     );
     if (existingKey) {
@@ -229,8 +250,8 @@ router.post('/payments', async (req, res) => {
     } else {
       const [result] = await conn.query(
         `INSERT INTO payments
-         (tenant_id, idempotency_key, for_month, rent_due, amount_paid, payment_date, mode, reference_no, notes, status, payment_source, created_by_user_id, updated_by_user_id)
-         VALUES (?,?,?,?,?,?,?,?,?,'pending','tenant',?,?,?)`,
+         (tenant_id, idempotency_key, for_month, rent_due, amount_paid, payment_date, mode, reference_no, notes, status, payment_source, created_by_user_id)
+         VALUES (?,?,?,?,?,?,?,?,?,'pending','tenant',?)`,
         [
           tenant.id,
           idempotencyKey,
@@ -241,7 +262,6 @@ router.post('/payments', async (req, res) => {
           mode,
           normalizeOptional(reference_no),
           normalizeOptional(notes),
-          req.user.id,
           req.user.id,
           req.user.id,
         ]
@@ -271,6 +291,15 @@ router.post('/payments', async (req, res) => {
       );
     }
 
+    await writeAuditLog({
+      tableName: 'payments',
+      recordId: paymentId,
+      action: existing ? 'update' : 'create',
+      changedBy: req.user.id,
+      changedByRole: 'tenant',
+      newValues: { for_month, amount_paid: totalAmount, payment_date, mode, reference_no, status: 'pending' },
+      ipAddress: req.ip,
+    });
     await conn.commit();
     res.redirect('/tenant/payments');
   } catch (err) {
