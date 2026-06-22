@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('partials/head', { title: 'Log in' }) %></head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card">
+      <h1>Tenancy<span style="color:var(--accent)">Ledger</span></h1>
+      <p class="sub">Admin: use your email. Tenant: use your flat code.</p>
+
+      <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+
+      <form method="POST" action="/login">
+        <label for="username">Email or flat code</label>
+        <input id="username" name="username" required autofocus placeholder="e.g. admin@company.com or E-1001">
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required>
+
+        <div class="btn-row">
+          <button class="btn" type="submit" style="width:100%">Log in</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

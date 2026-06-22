@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'My flat' }) %></head>
+<body>
+<%- include('../partials/tenant-nav', { active: 'dashboard' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>Welcome, <%= tenant.full_name.split(' ')[0] %></h1>
+    <p>Flat <span class="mono"><%= tenant.flat_code %></span> · <%= tenant.society_name %></p>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="label">Monthly rent</div><div class="value accent"><%= formatINR(tenant.rent_amount) %></div></div>
+    <div class="stat-card">
+      <div class="label"><%= monthLabel %> status</div>
+      <div class="value" style="font-size:18px;margin-top:10px">
+        <% if (thisMonthPayment && thisMonthPayment.status === 'confirmed') { %>
+          <span class="badge badge-success">Paid</span>
+        <% } else if (thisMonthPayment && thisMonthPayment.status === 'pending') { %>
+          <span class="badge badge-warning">Awaiting confirmation</span>
+        <% } else { %>
+          <span class="badge badge-danger">Not paid yet</span>
+        <% } %>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Police verification</div>
+      <div class="value" style="font-size:18px;margin-top:10px">
+        <% if (tenant.police_verification_status === 'verified') { %>
+          <span class="badge badge-success">Verified</span>
+        <% } else if (tenant.police_verification_status === 'submitted') { %>
+          <span class="badge badge-warning">Submitted</span>
+        <% } else { %>
+          <span class="badge badge-danger">Pending</span>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-row">
+    <div class="card">
+      <h3>Pay this month's rent</h3>
+      <p class="hint">Bank details, UPI and QR code are all on the payment page.</p>
+      <a class="btn" href="/tenant/payments">Go to payments →</a>
+    </div>
+    <div class="card">
+      <h3>Something needs fixing?</h3>
+      <p class="hint">Raise a maintenance request and track its status.</p>
+      <a class="btn btn-secondary" href="/tenant/maintenance">Raise a request →</a>
+    </div>
+    <div class="card">
+      <h3>Your agreement</h3>
+      <p class="hint">View and print your rent agreement anytime.</p>
+      <a class="btn btn-secondary" href="/tenant/agreement" target="_blank">View agreement →</a>
+    </div>
+  </div>
+
+  <%- include('../partials/contact-footer', { company }) %>
+</div>
+</body>
+</html>

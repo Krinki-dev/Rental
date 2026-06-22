@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Flats' }) %></head>
+<body>
+<%- include('../partials/admin-nav', { active: 'flats' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>All flats</h1>
+    <p><%= flats.length %> flats on record</p>
+  </div>
+
+  <div class="btn-row" style="margin-bottom:20px;margin-top:0">
+    <a class="btn" href="/admin/flats/new">+ Add a flat</a>
+  </div>
+
+  <div class="card table-wrap">
+    <table>
+      <thead>
+        <tr><th>Flat code</th><th>Tower / Floor</th><th class="num">Rent</th><th>Status</th><th>Tenant</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% flats.forEach(f => { %>
+        <tr>
+          <td class="mono"><%= f.flat_code %></td>
+          <td><%= f.tower || '-' %> / <%= f.floor || '-' %></td>
+          <td class="num mono"><%= formatINR(f.rent_amount) %></td>
+          <td>
+            <% if (f.status === 'occupied') { %>
+              <span class="badge badge-success">Occupied</span>
+            <% } else { %>
+              <span class="badge badge-muted">Vacant</span>
+            <% } %>
+          </td>
+          <td><%= f.full_name || '-' %></td>
+          <td><a href="/admin/flats/<%= f.id %>">Open →</a></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

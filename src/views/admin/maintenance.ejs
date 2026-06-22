@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Maintenance' }) %></head>
+<body>
+<%- include('../partials/admin-nav', { active: 'maintenance' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>Maintenance requests</h1>
+  </div>
+
+  <div class="card table-wrap">
+    <table>
+      <thead><tr><th>Flat</th><th>Tenant</th><th>Issue</th><th>Priority</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <% requests.forEach(m => { %>
+        <tr>
+          <td class="mono"><%= m.flat_code %></td>
+          <td><%= m.full_name %></td>
+          <td><%= m.issue_type %><br><span class="hint"><%= m.description %></span></td>
+          <td><span class="badge badge-warning"><%= m.priority %></span></td>
+          <td>
+            <% if (m.status === 'resolved') { %><span class="badge badge-success">Resolved</span>
+            <% } else if (m.status === 'in_progress') { %><span class="badge badge-warning">In progress</span>
+            <% } else { %><span class="badge badge-danger">Open</span><% } %>
+          </td>
+          <td>
+            <form method="POST" action="/admin/maintenance/<%= m.id %>/status">
+              <select name="status" onchange="this.form.submit()">
+                <option value="open" <%= m.status === 'open' ? 'selected' : '' %>>Open</option>
+                <option value="in_progress" <%= m.status === 'in_progress' ? 'selected' : '' %>>In progress</option>
+                <option value="resolved" <%= m.status === 'resolved' ? 'selected' : '' %>>Resolved</option>
+              </select>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (requests.length === 0) { %>
+          <tr><td colspan="6" class="empty">No requests yet.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

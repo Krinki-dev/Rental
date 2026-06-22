@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Maintenance' }) %></head>
+<body>
+<%- include('../partials/tenant-nav', { active: 'maintenance' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>Maintenance requests</h1>
+  </div>
+
+  <div class="card" style="max-width:560px">
+    <h3>Raise a new request</h3>
+    <form method="POST" action="/tenant/maintenance">
+      <label for="issue_type">What's the issue?</label>
+      <input id="issue_type" name="issue_type" required placeholder="e.g. Tap leaking, fan not working">
+
+      <label for="description">Describe it</label>
+      <textarea id="description" name="description" placeholder="Any extra detail that helps us fix it faster"></textarea>
+
+      <label for="priority">Priority</label>
+      <select id="priority" name="priority">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High - needs urgent attention</option>
+      </select>
+
+      <div class="btn-row">
+        <button class="btn" type="submit">Submit request</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Your requests</h3>
+    <% if (requests.length === 0) { %>
+      <p class="empty">No requests yet.</p>
+    <% } else { %>
+      <table>
+        <thead><tr><th>Issue</th><th>Priority</th><th>Status</th></tr></thead>
+        <tbody>
+        <% requests.forEach(m => { %>
+          <tr>
+            <td><%= m.issue_type %></td>
+            <td><%= m.priority %></td>
+            <td>
+              <% if (m.status === 'resolved') { %><span class="badge badge-success">Resolved</span>
+              <% } else if (m.status === 'in_progress') { %><span class="badge badge-warning">In progress</span>
+              <% } else { %><span class="badge badge-danger">Open</span><% } %>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+</div>
+</body>
+</html>

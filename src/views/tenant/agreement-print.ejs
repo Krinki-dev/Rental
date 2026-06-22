@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Agreement - ' + tenant.flat_code }) %></head>
+<body>
+<%- include('../partials/tenant-nav', { active: 'agreement' }) %>
+
+<div class="print-bar">
+  <button class="btn" onclick="window.print()">Print this agreement</button>
+</div>
+
+<div class="agreement">
+  <div class="stamp-space">Space reserved for stamp</div>
+
+  <h2>SUBLEASE AGREEMENT</h2>
+  <p style="text-align:center">This Sublease Agreement is a draft for printing. Both parties must sign the
+  printed copy by hand and have it notarized / attested as applicable.</p>
+
+  <p class="clause"><strong>BETWEEN</strong></p>
+  <p class="clause">
+    <%= company.name %>, having its registered office at <%= company.registeredAddress %>
+    (hereinafter the "SUB-LESSOR").
+  </p>
+
+  <p class="clause"><strong>AND</strong></p>
+  <p class="clause">
+    Mr./Ms. <%= tenant.full_name %>, S/o / W/o <%= tenant.father_husband_name || '____________' %>,
+    resident of <%= tenant.permanent_address || '____________' %> (hereinafter the "SUB-LESSEE").
+  </p>
+
+  <p class="clause">
+    <strong>WHEREAS</strong> the Sub-Lessor has the right to sub-let Flat No.
+    <strong><%= tenant.flat_code %></strong> (Tower <%= tenant.tower %>, Floor <%= tenant.floor %>),
+    1 BHK, situated at <%= tenant.society_name %>.
+  </p>
+
+  <p class="clause"><strong>1. TERM:</strong> 11 (eleven) months, from <%= tenant.agreement_start %> to <%= tenant.agreement_end %>.</p>
+
+  <p class="clause"><strong>2. RENT:</strong> ₹<%= tenant.rent_amount %>/- per month, inclusive of maintenance, common-area
+  electricity/water, and GST. No additional maintenance charge applies.</p>
+
+  <p class="clause"><strong>3. SECURITY DEPOSIT:</strong> ₹<%= tenant.security_deposit %>/-, refundable on vacating,
+  subject to deductions for arrears or damage.</p>
+
+  <p class="clause"><strong>4. PAYMENT TERMS:</strong> Rent is due on or before the 10th of each month. A late fee
+  of ₹50/day applies after the due date.</p>
+
+  <p class="clause"><strong>5. LOCK-IN PERIOD:</strong> 3 (three) months. Early termination during lock-in forfeits
+  the security deposit.</p>
+
+  <p class="clause"><strong>6. NOTICE PERIOD:</strong> Either party may terminate after the lock-in with 1 (one)
+  month's written notice.</p>
+
+  <p class="clause"><strong>7. UTILITIES:</strong> Electricity and water are paid by the Sub-Lessee directly, based
+  on meter readings.</p>
+
+  <p class="clause"><strong>8. MAINTENANCE & DAMAGE:</strong> Structural repairs are the Sub-Lessor's responsibility.
+  Minor repairs and any damage from negligence are the Sub-Lessee's responsibility.</p>
+
+  <p class="clause"><strong>9. FURNISHING:</strong> The Sub-Lessor provides fans and lights, to be returned in good
+  condition (normal wear excepted).</p>
+
+  <p class="clause"><strong>10. RULES:</strong> The Sub-Lessee shall follow all society rules. Pets are allowed as
+  per society rules. Subletting is allowed only with prior information and valid ID proof shared with the Sub-Lessor.</p>
+
+  <p class="clause"><strong>11. POLICE VERIFICATION:</strong> Mandatory within 7 days of possession. Failure to
+  complete this makes the agreement voidable at the Sub-Lessor's discretion.</p>
+
+  <p class="clause"><strong>12. INSPECTION:</strong> The Sub-Lessor may inspect the premises with 24 hours' prior notice.</p>
+
+  <div class="sign-row">
+    <div>SUB-LESSOR<br>For <%= company.name %><br>Authorized Signatory</div>
+    <div>SUB-LESSEE<br><%= tenant.full_name %><br>Signature</div>
+  </div>
+</div>
+
+</body>
+</html>

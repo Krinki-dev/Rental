@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Dashboard' }) %></head>
+<body>
+<%- include('../partials/admin-nav', { active: 'dashboard' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>Dashboard</h1>
+    <p><%= monthLabel %> overview</p>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="label">Total flats</div><div class="value"><%= totalFlats %></div></div>
+    <div class="stat-card"><div class="label">Occupied</div><div class="value"><%= occupied %></div></div>
+    <div class="stat-card"><div class="label">Vacant</div><div class="value"><%= vacant %></div></div>
+    <div class="stat-card"><div class="label">Collected this month</div><div class="value accent"><%= formatINR(collected) %></div></div>
+    <div class="stat-card"><div class="label">Pending confirmation</div><div class="value"><%= pendingCount %></div></div>
+  </div>
+
+  <div class="card-row">
+    <div class="card">
+      <h3>Police verification pending</h3>
+      <% if (pvPending.length === 0) { %>
+        <p class="empty" style="padding:10px 0">All tenants verified.</p>
+      <% } else { %>
+        <table>
+          <tbody>
+          <% pvPending.forEach(p => { %>
+            <tr><td><%= p.flat_code %></td><td><%= p.full_name %></td></tr>
+          <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <h3>Open maintenance requests</h3>
+      <% if (openMaint.length === 0) { %>
+        <p class="empty" style="padding:10px 0">Nothing open right now.</p>
+      <% } else { %>
+        <table>
+          <tbody>
+          <% openMaint.forEach(m => { %>
+            <tr>
+              <td><%= m.flat_code %></td>
+              <td><%= m.issue_type %></td>
+              <td><span class="badge badge-warning"><%= m.priority %></span></td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <a class="btn" href="/admin/flats/new">+ Add a flat</a>
+    <a class="btn btn-secondary" href="/admin/payments">Review payments</a>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Pay rent' }) %></head>
+<body>
+<%- include('../partials/tenant-nav', { active: 'payments' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>Pay rent</h1>
+    <p><%= monthLabel %> · Flat <span class="mono"><%= tenant.flat_code %></span></p>
+  </div>
+
+  <div class="pay-grid">
+    <div class="card">
+      <h3>Where to pay</h3>
+
+      <div class="qr-box">
+        <img src="/api/payment-qr.png?amount=<%= tenant.rent_amount %>&note=Rent+<%= tenant.flat_code %>" alt="UPI QR code" width="200" height="200">
+        <p class="hint">Scan with any UPI app - the amount is pre-filled.</p>
+      </div>
+
+      <div style="margin-top:18px">
+        <div class="copy-line"><span>UPI ID</span><span class="v"><%= payment.upiId %></span></div>
+        <div class="copy-line"><span>Payee name</span><span class="v"><%= payment.upiPayeeName %></span></div>
+      </div>
+
+      <h3 style="margin-top:24px">Or bank transfer</h3>
+      <div class="copy-line"><span>Account name</span><span class="v"><%= payment.bankAccountName %></span></div>
+      <div class="copy-line"><span>Account number</span><span class="v"><%= payment.bankAccountNumber %></span></div>
+      <div class="copy-line"><span>IFSC</span><span class="v"><%= payment.bankIfsc %></span></div>
+      <div class="copy-line"><span>Bank & branch</span><span class="v"><%= payment.bankName %> <%= payment.bankBranch %></span></div>
+    </div>
+
+    <div class="card">
+      <h3>After you've paid, tell us</h3>
+      <p class="hint">Enter the amount and the reference / UTR number from your bank or UPI app. We'll confirm it and email you a receipt.</p>
+      <form method="POST" action="/tenant/payments">
+        <input type="hidden" name="for_month" value="<%= currentMonth %>">
+
+        <label for="amount_paid">Amount paid (₹)</label>
+        <input id="amount_paid" name="amount_paid" type="number" min="0" step="1" required
+               value="<%= thisMonthPayment ? thisMonthPayment.amount_paid : tenant.rent_amount %>">
+
+        <label for="payment_date">Date paid</label>
+        <input id="payment_date" name="payment_date" type="date" required value="<%= thisMonthPayment ? thisMonthPayment.payment_date : '' %>">
+
+        <label for="mode">Payment mode</label>
+        <select id="mode" name="mode" required>
+          <option value="UPI">UPI</option>
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="Cash">Cash</option>
+          <option value="Cheque">Cheque</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <label for="reference_no">Reference / UTR number</label>
+        <input id="reference_no" name="reference_no" required placeholder="e.g. 12-digit UPI ref number"
+               value="<%= thisMonthPayment ? thisMonthPayment.reference_no : '' %>">
+
+        <div class="btn-row">
+          <button class="btn" type="submit">Submit for confirmation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Payment history</h3>
+    <% if (payments.length === 0) { %>
+      <p class="empty">No payments submitted yet.</p>
+    <% } else { %>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Month</th><th class="num">Paid</th><th>Reference</th><th>Status</th></tr></thead>
+        <tbody>
+        <% payments.forEach(p => { %>
+          <tr>
+            <td><%= p.for_month %></td>
+            <td class="num mono"><%= p.amount_paid ? formatINR(p.amount_paid) : '-' %></td>
+            <td class="mono"><%= p.reference_no || '-' %></td>
+            <td>
+              <% if (p.status === 'confirmed') { %><span class="badge badge-success">Confirmed</span>
+              <% } else { %><span class="badge badge-warning">Pending</span><% } %>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+</body>
+</html>

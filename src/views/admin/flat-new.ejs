@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Add a flat' }) %></head>
+<body>
+<%- include('../partials/admin-nav', { active: 'flats' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>Add a flat</h1>
+    <p>Rent is set per flat - type the exact amount you've agreed.</p>
+  </div>
+
+  <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+
+  <div class="card" style="max-width:560px">
+    <form method="POST" action="/admin/flats">
+      <label for="flat_code">Flat code</label>
+      <input id="flat_code" name="flat_code" required placeholder="e.g. E-1001">
+
+      <div class="field-row">
+        <div>
+          <label for="tower">Tower</label>
+          <input id="tower" name="tower" placeholder="E">
+        </div>
+        <div>
+          <label for="floor">Floor</label>
+          <input id="floor" name="floor" placeholder="10">
+        </div>
+        <div>
+          <label for="unit">Unit</label>
+          <input id="unit" name="unit" placeholder="01">
+        </div>
+      </div>
+
+      <label for="rent_amount">Monthly rent (₹)</label>
+      <input id="rent_amount" name="rent_amount" type="number" min="0" step="1" required placeholder="12000">
+
+      <div class="btn-row">
+        <button class="btn" type="submit">Save flat</button>
+        <a class="btn btn-secondary" href="/admin/flats">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+</body>
+</html>

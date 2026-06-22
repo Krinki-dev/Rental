@@ -1,0 +1,9 @@
+<div class="contact-footer">
+  <% if (company.officeAddress) { %><div><%= company.officeAddress %></div><% } %>
+  <div>
+    <% if (company.representativeName) { %><span><%= company.representativeName %></span><% } %>
+    <% if (company.contactNumber) { %><a href="tel:<%= company.contactNumber %>"><%= company.contactNumber %></a><% } %>
+    <% if (company.email) { %><a href="mailto:<%= company.email %>"><%= company.email %></a><% } %>
+    <% if (company.whatsappLink) { %><a href="<%= company.whatsappLink %>" target="_blank">WhatsApp</a><% } %>
+  </div>
+</div>
