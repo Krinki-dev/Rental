@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Request Vacate' }) %></head>
+<body>
+<%- include('../partials/tenant-nav', { active: '' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>Request to Vacate Flat</h1>
+    <p>Submit your request to vacate the flat</p>
+  </div>
+
+  <div class="card" style="max-width:680px">
+    <h3>Flat Details</h3>
+    <p><strong>Flat:</strong> <%= tenant.flat_code %></p>
+    <p><strong>Agreement End:</strong> <%= tenant.agreement_end || 'Not specified' %></p>
+    
+    <% if (tenant.vacate_status === 'requested') { %>
+      <div class="alert alert-warning" style="margin-top:16px;">
+        <strong>Request Pending:</strong> Your vacate request for <%= tenant.vacate_requested_date %> is awaiting admin approval.
+      </div>
+    <% } %>
+
+    <% if (error) { %>
+      <div class="alert alert-danger" style="margin-top:16px;"><%= error %></div>
+    <% } %>
+
+    <% if (!tenant.vacate_status === 'requested') { %>
+    <form method="POST" action="/tenant/request-vacate" style="margin-top:20px;">
+      <label for="requested_vacate_date">Requested Vacate Date *</label>
+      <input id="requested_vacate_date" name="requested_vacate_date" type="date" required>
+      <p class="hint">Must be at least 1 month from today and within agreement period.</p>
+
+      <label for="reason">Reason (optional)</label>
+      <textarea id="reason" name="reason" rows="3" placeholder="Reason for vacating..."></textarea>
+
+      <div class="btn-row">
+        <button class="btn" type="submit">Submit Vacate Request</button>
+        <a class="btn btn-secondary" href="/tenant/dashboard">Cancel</a>
+      </div>
+    </form>
+    <% } %>
+  </div>
+</div>
+</body>
+</html>

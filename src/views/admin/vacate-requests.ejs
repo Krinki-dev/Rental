@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Vacate Requests' }) %></head>
+<body>
+<%- include('../partials/admin-nav', { active: '' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>Vacate Requests</h1>
+    <p>Review and process tenant vacate requests</p>
+  </div>
+
+  <div class="card">
+    <% if (requests.length === 0) { %>
+      <p class="empty">No pending vacate requests.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr>
+            <th>Flat</th>
+            <th>Tenant</th>
+            <th>Requested Date</th>
+            <th>Agreement End</th>
+            <th>Reason</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% requests.forEach(r => { %>
+            <tr>
+              <td><%= r.flat_code %></td>
+              <td><%= r.full_name %></td>
+              <td><%= r.vacate_requested_date %></td>
+              <td><%= r.agreement_end || '-' %></td>
+              <td><%= r.vacate_reason || '-' %></td>
+              <td>
+                <form method="POST" action="/admin/vacate-requests/<%= r.id %>/approve" style="display:inline;">
+                  <input type="hidden" name="final_vacate_date" value="<%= r.vacate_requested_date %>">
+                  <button class="btn btn-sm" type="submit">Approve</button>
+                </form>
+                <form method="POST" action="/admin/vacate-requests/<%= r.id %>/reject" style="display:inline;" onsubmit="return confirm('Reject this vacate request?')">
+                  <button class="btn btn-danger btn-sm" type="submit">Reject</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <div class="btn-row">
+    <a class="btn btn-secondary" href="/admin/dashboard">Back to Dashboard</a>
+  </div>
+</div>
+</body>
+</html>

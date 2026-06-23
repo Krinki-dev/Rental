@@ -44,6 +44,12 @@ CREATE TABLE IF NOT EXISTS tenants (
   police_verification_date DATE,
   drive_folder_link VARCHAR(500),
   is_active TINYINT(1) NOT NULL DEFAULT 1,
+  vacate_status ENUM('none','requested','approved','rejected') DEFAULT 'none',
+  vacate_requested_date DATE NULL,
+  vacate_approved_date DATE NULL,
+  vacate_reason TEXT NULL,
+  move_out_date DATE NULL,
+  archived_at DATETIME NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (flat_id) REFERENCES flats(id),
   FOREIGN KEY (user_id) REFERENCES users(id)

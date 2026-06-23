@@ -118,4 +118,48 @@ router.get('/agreement', async (req, res) => {
   res.render('tenant/agreement-print', { tenant, company: env.company, formatINR });
 });
 
+router.get('/request-vacate', async (req, res) => {
+  const tenant = await getTenantByUserId(req.user.id);
+  if (!tenant) return res.status(404).send('No active tenancy found for this account.');
+  res.render('tenant/request-vacate', { tenant, error: null });
+});
+
+router.post('/request-vacate', async (req, res) => {
+  const tenant = await getTenantByUserId(req.user.id);
+  if (!tenant) return res.status(404).send('No active tenancy found for this account.');
+
+  const { requested_vacate_date, reason } = req.body;
+  
+  if (!requested_vacate_date) {
+    return res.status(400).send('Vacate date is required.');
+  }
+
+  const vacateDate = new Date(requested_vacate_date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Must give at least 1 month notice
+  const oneMonthLater = new Date(today);
+  oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+
+  if (vacateDate < oneMonthLater) {
+    return res.status(400).send('Vacate date must be at least 1 month from today.');
+  }
+
+  // Check if vacate date is within agreement period
+  if (tenant.agreement_end && vacateDate > new Date(tenant.agreement_end)) {
+    return res.status(400).send('Vacate date cannot exceed agreement end date.');
+  }
+
+  // Update tenant with vacate request
+  await pool.query(
+    `UPDATE tenants 
+     SET vacate_requested_date = ?, vacate_reason = ?, vacate_status = 'requested'
+     WHERE id = ?`,
+    [requested_vacate_date, reason || null, tenant.id]
+  );
+
+  res.redirect('/tenant/dashboard');
+});
+
 module.exports = router;

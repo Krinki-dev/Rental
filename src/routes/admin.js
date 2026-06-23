@@ -115,6 +115,22 @@ router.post('/flats/:id/tenant', async (req, res) => {
   const [[flat]] = await pool.query('SELECT * FROM flats WHERE id = ?', [flatId]);
   if (!flat) return res.status(404).send('Flat not found');
 
+  // Validate agreement dates
+  if (!agreement_start || !agreement_end) {
+    return res.status(400).send('Agreement start and end dates are required.');
+  }
+  
+  const startDate = new Date(agreement_start);
+  const endDate = new Date(agreement_end);
+  const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth());
+  
+  if (monthsDiff < 3) {
+    return res.status(400).send('Agreement must be at least 3 months.');
+  }
+  if (monthsDiff > 11) {
+    return res.status(400).send('Agreement cannot exceed 11 months.');
+  }
+
   const firstName = full_name.split(' ')[0]; // Get first name
   const tempPassword = generateTempPassword(firstName, flat.flat_code);
   const hash = await hashPassword(tempPassword);
@@ -198,6 +214,78 @@ router.post('/flats/:id/vacate', async (req, res) => {
   res.redirect(`/admin/flats/${req.params.id}`);
 });
 
+// View vacate requests
+router.get('/vacate-requests', async (req, res) => {
+  const [requests] = await pool.query(
+    `SELECT t.*, f.flat_code, f.rent_amount
+     FROM tenants t
+     JOIN flats f ON f.id = t.flat_id
+     WHERE t.vacate_status = 'requested' AND t.is_active = 1
+     ORDER BY t.vacate_requested_date ASC`
+  );
+  res.render('admin/vacate-requests', { requests, formatINR });
+});
+
+// Approve vacate request with modified date
+router.post('/vacate-requests/:id/approve', async (req, res) => {
+  const tenantId = req.params.id;
+  const { final_vacate_date } = req.body;
+
+  const [[tenant]] = await pool.query(
+    `SELECT t.*, f.flat_code FROM tenants t JOIN flats f ON f.id = t.flat_id WHERE t.id = ?`,
+    [tenantId]
+  );
+
+  if (!tenant) return res.status(404).send('Tenant not found');
+
+  const vacateDate = final_vacate_date || tenant.vacate_requested_date;
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Update tenant as vacated
+    await conn.query(
+      `UPDATE tenants 
+       SET is_active = 0, vacate_status = 'approved', vacate_approved_date = ?, move_out_date = ?
+       WHERE id = ?`,
+      [new Date().toISOString().slice(0, 10), vacateDate, tenantId]
+    );
+
+    // Update flat to vacant
+    await conn.query('UPDATE flats SET status = "vacant" WHERE id = ?', [tenant.flat_id]);
+
+    // Archive old tenant details (keep in tenants table but mark as archived)
+    await conn.query(
+      `UPDATE tenants SET archived_at = NOW() WHERE id = ?`,
+      [tenantId]
+    );
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    console.error(err);
+    return res.status(500).send('Could not process vacate request.');
+  } finally {
+    conn.release();
+  }
+
+  res.redirect('/admin/vacate-requests');
+});
+
+// Reject vacate request
+router.post('/vacate-requests/:id/reject', async (req, res) => {
+  const tenantId = req.params.id;
+  
+  await pool.query(
+    `UPDATE tenants SET vacate_status = 'rejected', vacate_requested_date = NULL, vacate_reason = NULL
+     WHERE id = ?`,
+    [tenantId]
+  );
+
+  res.redirect('/admin/vacate-requests');
+});
+
 // ---------- Payments ----------
 router.get('/payments', async (req, res) => {
   const [payments] = await pool.query(
@@ -259,7 +347,7 @@ router.post('/flats/:id/reset-password', async (req, res) => {
   const flatId = req.params.id;
   const { tenant_id } = req.body;
   const [[tenant]] = await pool.query(
-    `SELECT t.id, t.user_id, t.full_name, f.flat_code
+    `SELECT t.id, t.user_id, t.full_name, t.email, f.flat_code
      FROM tenants t
      JOIN flats f ON f.id = t.flat_id
      WHERE t.id = ? AND t.flat_id = ?`,
@@ -277,6 +365,25 @@ router.post('/flats/:id/reset-password', async (req, res) => {
     'UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?',
     [hash, tenant.user_id]
   );
+
+  // Send password reset confirmation email
+  if (tenant.email) {
+    await sendMail({
+      to: tenant.email,
+      subject: `Password reset for Flat ${tenant.flat_code}`,
+      html: `
+        <p>Dear ${tenant.full_name},</p>
+        <p>Your password for Flat <strong>${tenant.flat_code}</strong> has been reset by admin.</p>
+        <p>
+          <strong>Login URL:</strong> <a href="${env.appBaseUrl}/login">${env.appBaseUrl}/login</a><br/>
+          <strong>Username:</strong> ${tenant.flat_code}<br/>
+          <strong>New password:</strong> <code style="background:#f3f4f6; padding:4px 8px; border-radius:4px;">${newPassword}</code>
+        </p>
+        <p>Please log in and change your password.</p>
+        <p>Regards,<br/>${env.company.representativeName || env.company.name}</p>
+      `
+    }).catch(() => {});
+  }
 
   res.redirect(`/admin/flats/${flatId}`);
 });
