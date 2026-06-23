@@ -131,6 +131,24 @@ router.post('/flats/:id/tenant', async (req, res) => {
     return res.status(400).send('Agreement cannot exceed 11 months.');
   }
 
+  // Check for date overlap with existing tenants
+  const [[existingTenant]] = await pool.query(
+    `SELECT id, full_name, agreement_start, agreement_end 
+     FROM tenants 
+     WHERE flat_id = ? AND is_active = 1 LIMIT 1`,
+    [flatId]
+  );
+  
+  if (existingTenant) {
+    const existingStart = new Date(existingTenant.agreement_start);
+    const existingEnd = new Date(existingTenant.agreement_end);
+    
+    // Check if new dates overlap with existing tenant
+    if ((startDate <= existingEnd && endDate >= existingStart)) {
+      return res.status(400).send(`Flat already has active tenant (${existingTenant.full_name}) from ${existingTenant.agreement_start} to ${existingTenant.agreement_end}. Please vacate existing tenant first.`);
+    }
+  }
+
   const firstName = full_name.split(' ')[0]; // Get first name
   const tempPassword = generateTempPassword(firstName, flat.flat_code);
   const hash = await hashPassword(tempPassword);
