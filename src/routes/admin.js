@@ -121,16 +121,36 @@ router.post('/flats/:id/tenant', async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const [userResult] = await conn.query(
-      'INSERT INTO users (role, username, password_hash, must_change_password) VALUES ("tenant", ?, ?, 1)',
-      [flat.flat_code, hash]
+    
+    // Check if user with this flat code already exists (from previous tenant)
+    const [[existingUser]] = await conn.query(
+      'SELECT id FROM users WHERE username = ? AND role = "tenant" LIMIT 1',
+      [flat.flat_code]
     );
+    
+    let userId;
+    if (existingUser) {
+      // Reuse existing user, just update password
+      await conn.query(
+        'UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?',
+        [hash, existingUser.id]
+      );
+      userId = existingUser.id;
+    } else {
+      // Create new user
+      const [userResult] = await conn.query(
+        'INSERT INTO users (role, username, password_hash, must_change_password) VALUES ("tenant", ?, ?, 1)',
+        [flat.flat_code, hash]
+      );
+      userId = userResult.insertId;
+    }
+    
     await conn.query(
       `INSERT INTO tenants
         (flat_id, user_id, full_name, father_husband_name, phone, alt_phone, email,
          permanent_address, aadhaar_number, pan_number, agreement_start, agreement_end, security_deposit)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [flatId, userResult.insertId, full_name, father_husband_name, phone, alt_phone, email,
+      [flatId, userId, full_name, father_husband_name, phone, alt_phone, email,
         permanent_address, aadhaar_number, pan_number,
         agreement_start || null, agreement_end || null, Number(security_deposit || 0)]
     );
