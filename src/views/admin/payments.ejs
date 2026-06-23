@@ -1,174 +1,46 @@
-<%- include('../partials/head', { title: 'Payments' }) %>
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Payments' }) %></head>
+<body>
 <%- include('../partials/admin-nav', { active: 'payments' }) %>
-
-<section class="container">
-  <div class="page-header">
-    <div>
-      <h1>Payments</h1>
-      <p>Review tenant payments, confirm receipts safely, and update payment details on behalf of tenants when required.</p>
-    </div>
+<div class="shell">
+  <div class="page-head">
+    <h1>Payments</h1>
+    <p>Confirm a payment to auto-calculate late fees and email the receipt.</p>
   </div>
 
-  <% if (!payments || !payments.length) { %>
-    <div class="card empty-state">
-      <h3>No payments yet</h3>
-      <p>Submitted and admin-entered payments will appear here.</p>
-    </div>
-  <% } else { %>
-    <div class="card table-card">
-      <div class="table-wrap">
-        <table class="payments-table">
-          <thead>
-            <tr>
-              <th>Flat</th>
-              <th>Tenant</th>
-              <th>Month</th>
-              <th>Amount</th>
-              <th>Reference</th>
-              <th>Source</th>
-              <th>Status</th>
-              <th>Receipt</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% payments.forEach((p) => { %>
-              <tr>
-                <td><strong><%= p.flat_code %></strong></td>
-                <td><%= p.full_name %></td>
-                <td><%= p.for_month %></td>
-                <td>
-                  <div><%= p.amount_paid ? formatINR(p.amount_paid) : '-' %></div>
-                  <% if (p.total_from_items && Number(p.total_from_items) !== Number(p.amount_paid || 0)) { %>
-                    <small class="muted">Items: <%= formatINR(p.total_from_items) %></small>
-                  <% } %>
-                </td>
-                <td>
-                  <div><%= p.reference_no || '-' %></div>
-                  <small class="muted"><%= p.mode || 'Mode not set' %></small>
-                </td>
-                <td>
-                  <span class="badge <%= p.payment_source === 'admin' ? 'badge-info' : 'badge-muted' %>">
-                    <%= p.payment_source === 'admin' ? 'Admin' : 'Tenant' %>
-                  </span>
-                </td>
-                <td>
-                  <% if (p.status === 'confirmed') { %>
-                    <span class="badge badge-success">Confirmed</span>
-                  <% } else { %>
-                    <span class="badge badge-warning">Pending</span>
-                  <% } %>
-                </td>
-                <td>
-                  <%= p.receipt_no || '-' %>
-                  <% if (p.transaction_hash) { %>
-                    <div><small class="muted">Protected</small></div>
-                  <% } %>
-                </td>
-                <td>
-                  <div class="actions-stack">
-                    <% if (p.status !== 'confirmed') { %>
-                      <form method="post" action="/admin/payments/<%= p.id %>/confirm" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Confirming...';">
-                        <button type="submit" class="btn btn-primary btn-sm">Confirm</button>
-                      </form>
-                    <% } else { %>
-                      <span class="muted">Locked</span>
-                    <% } %>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleEdit('edit-payment-<%= p.id %>')">Edit</button>
-                  </div>
-                </td>
-              </tr>
-              <tr id="edit-payment-<%= p.id %>" class="edit-row" hidden>
-                <td colspan="9">
-                  <form method="post" action="/admin/payments/<%= p.id %>/update" class="edit-form grid-form">
-                    <div>
-                      <label>Amount Paid</label>
-                      <input type="number" step="0.01" name="amount_paid" value="<%= p.amount_paid || 0 %>" required>
-                    </div>
-                    <div>
-                      <label>Payment Date</label>
-                      <input type="date" name="payment_date" value="<%= p.payment_date ? new Date(p.payment_date).toISOString().slice(0,10) : '' %>">
-                    </div>
-                    <div>
-                      <label>Reference No.</label>
-                      <input type="text" name="reference_no" value="<%= p.reference_no || '' %>">
-                    </div>
-                    <div>
-                      <label>Mode</label>
-                      <select name="mode">
-                        <% ['UPI','Bank Transfer','Cash','Cheque','Other'].forEach((mode) => { %>
-                          <option value="<%= mode %>" <%= p.mode === mode ? 'selected' : '' %>><%= mode %></option>
-                        <% }) %>
-                      </select>
-                    </div>
-                    <div>
-                      <label>Status</label>
-                      <select name="status">
-                        <option value="pending" <%= p.status === 'pending' ? 'selected' : '' %>>Pending</option>
-                        <option value="confirmed" <%= p.status === 'confirmed' ? 'selected' : '' %>>Confirmed</option>
-                      </select>
-                    </div>
-                    <div class="full-width">
-                      <label>Notes</label>
-                      <textarea name="notes" rows="2"><%= p.notes || '' %></textarea>
-                    </div>
-                    <div class="full-width form-actions">
-                      <button type="submit" class="btn btn-primary btn-sm">Save Update</button>
-                      <button type="button" class="btn btn-secondary btn-sm" onclick="toggleEdit('edit-payment-<%= p.id %>')">Cancel</button>
-                    </div>
-                  </form>
-                </td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  <% } %>
-</section>
-
-<script>
-  function toggleEdit(id) {
-    const row = document.getElementById(id);
-    if (!row) return;
-    row.hidden = !row.hidden;
-  }
-</script>
-
-<style>
-  .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px 40px; }
-  .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
-  .page-header h1 { margin: 0 0 8px; }
-  .page-header p { margin: 0; color: #666; }
-  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
-  .empty-state { text-align: center; padding: 40px 20px; }
-  .table-card { overflow: hidden; }
-  .table-wrap { overflow-x: auto; }
-  .payments-table { width: 100%; border-collapse: collapse; }
-  .payments-table th, .payments-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
-  .payments-table th { font-size: 13px; color: #4b5563; background: #f9fafb; }
-  .muted { color: #6b7280; }
-  .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-  .badge-success { background: #dcfce7; color: #166534; }
-  .badge-warning { background: #fef3c7; color: #92400e; }
-  .badge-info { background: #dbeafe; color: #1d4ed8; }
-  .badge-muted { background: #e5e7eb; color: #374151; }
-  .btn { border: 0; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-weight: 600; }
-  .btn-sm { font-size: 13px; }
-  .btn-primary { background: #111827; color: #fff; }
-  .btn-secondary { background: #f3f4f6; color: #111827; }
-  .actions-stack { display: flex; gap: 8px; flex-wrap: wrap; }
-  .edit-row td { background: #fafafa; }
-  .grid-form { display: grid; grid-template-columns: repeat(5, minmax(140px, 1fr)); gap: 12px; }
-  .grid-form label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; color: #4b5563; }
-  .grid-form input, .grid-form select, .grid-form textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font: inherit; }
-  .full-width { grid-column: 1 / -1; }
-  .form-actions { display: flex; gap: 8px; }
-  @media (max-width: 900px) {
-    .grid-form { grid-template-columns: 1fr 1fr; }
-  }
-  @media (max-width: 640px) {
-    .grid-form { grid-template-columns: 1fr; }
-    .payments-table th, .payments-table td { padding: 10px 8px; }
-  }
-</style>
+  <div class="card table-wrap">
+    <table>
+      <thead>
+        <tr><th>Flat</th><th>Tenant</th><th>Month</th><th class="num">Paid</th><th>Reference</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% payments.forEach(p => { %>
+        <tr>
+          <td class="mono"><%= p.flat_code %></td>
+          <td><%= p.full_name %></td>
+          <td><%= p.for_month %></td>
+          <td class="num mono"><%= p.amount_paid ? formatINR(p.amount_paid) : '-' %></td>
+          <td class="mono"><%= p.reference_no || '-' %></td>
+          <td>
+            <% if (p.status === 'confirmed') { %><span class="badge badge-success">Confirmed</span>
+            <% } else { %><span class="badge badge-warning">Pending</span><% } %>
+          </td>
+          <td>
+            <% if (p.status === 'pending') { %>
+            <form method="POST" action="/admin/payments/<%= p.id %>/confirm">
+              <button class="btn btn-sm" type="submit">Confirm & email receipt</button>
+            </form>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (payments.length === 0) { %>
+          <tr><td colspan="7" class="empty">No payments yet.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

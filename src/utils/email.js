@@ -1,64 +1,34 @@
-const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const env = require('../config/env');
 
 let transporter = null;
-const recentEmailKeys = new Map();
-const DEDUPE_WINDOW_MS = 2 * 60 * 1000;
-
 function getTransporter() {
   if (!env.smtp.host || !env.smtp.user || !env.smtp.pass) {
-    return null;
+    return null; // SMTP not configured yet - calls below will no-op safely.
   }
-
   if (!transporter) {
     transporter = nodemailer.createTransport({
       host: env.smtp.host,
       port: env.smtp.port,
       secure: env.smtp.port === 465,
-      auth: {
-        user: env.smtp.user,
-        pass: env.smtp.pass,
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
+      auth: { user: env.smtp.user, pass: env.smtp.pass },
+      connectionTimeout: 10000, // 10s to establish the connection
+      greetingTimeout: 10000,   // 10s to hear back from the server
+      socketTimeout: 15000,     // 15s of inactivity before giving up
     });
   }
-
   return transporter;
 }
 
-function cleanupRecentKeys() {
-  const now = Date.now();
-  for (const [key, ts] of recentEmailKeys.entries()) {
-    if (now - ts > DEDUPE_WINDOW_MS) recentEmailKeys.delete(key);
-  }
-}
-
-function shouldSkipDuplicateEmail(key) {
-  cleanupRecentKeys();
-  if (!key) return false;
-  if (recentEmailKeys.has(key)) return true;
-  recentEmailKeys.set(key, Date.now());
-  return false;
-}
-
-async function sendMail({ to, subject, html, attachments = [], dedupeKey = null }) {
+async function sendMail({ to, subject, html, attachments }) {
   const t = getTransporter();
   if (!t || !to) {
     console.log(`[email skipped - SMTP not configured] to=${to} subject="${subject}"`);
     return { skipped: true };
   }
-
-  if (shouldSkipDuplicateEmail(dedupeKey)) {
-    console.warn(`[email deduped] to=${to} subject="${subject}" key=${dedupeKey}`);
-    return { skipped: true, duplicate: true };
-  }
-
   try {
     const info = await t.sendMail({
-      from: `"${env.smtp.fromName || env.company.name}" <${env.smtp.user}>`,
+      from: `"${env.smtp.fromName}" <${env.smtp.user}>`,
       to,
       subject,
       html,
@@ -66,75 +36,47 @@ async function sendMail({ to, subject, html, attachments = [], dedupeKey = null 
     });
     return { sent: true, info };
   } catch (err) {
+    // Don't let a bad SMTP password or a down mail server break the
+    // request that triggered this email (tenant creation, payment
+    // confirmation, etc). Log it clearly so it's easy to spot, and move on.
     console.error(`[email FAILED] to=${to} subject="${subject}" - ${err.message}`);
     return { sent: false, error: err.message };
   }
 }
 
-function basicHtmlLayout(title, bodyHtml) {
-  return `
-    <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.6; max-width: 640px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; background: #ffffff;">
-      <h2 style="margin: 0 0 16px;">${title}</h2>
-      <div>${bodyHtml}</div>
-      <p style="margin-top: 24px;">Regards,<br><strong>${env.company.representativeName || env.company.name}</strong></p>
-    </div>
-  `;
-}
-
 async function sendWelcomeEmail({ to, tenantName, flatCode, loginUsername, tempPassword }) {
   const loginUrl = `${env.appBaseUrl}/login`;
-  const subject = `Tenant account created for Flat ${flatCode}`;
-  const html = basicHtmlLayout(
-    'Welcome to the tenant portal',
-    `
-      <p>Dear ${tenantName},</p>
-      <p>Your tenant account for <strong>Flat ${flatCode}</strong> has been created.</p>
-      <p>
-        <strong>Login URL:</strong> <a href="${loginUrl}">${loginUrl}</a><br>
-        <strong>Username:</strong> ${loginUsername}<br>
-        <strong>Temporary password:</strong> ${tempPassword}
-      </p>
-      <p>Please log in and change your password after first sign-in.</p>
-    `
-  );
-
-  return sendMail({
-    to,
-    subject,
-    html,
-    dedupeKey: crypto.createHash('sha256').update(`welcome|${to}|${flatCode}|${loginUsername}`).digest('hex'),
-  });
+  const html = `
+    <p>Dear ${tenantName},</p>
+    <p>Welcome! Your flat <strong>${flatCode}</strong> is ready, and your tenant account has been created.</p>
+    <p>
+      <strong>Login link:</strong> <a href="${loginUrl}">${loginUrl}</a><br/>
+      <strong>Username (Flat Code):</strong> ${loginUsername}<br/>
+      <strong>Temporary password:</strong> ${tempPassword}
+    </p>
+    <p>Please log in and change your password. From your portal you can view your agreement,
+    pay rent, raise maintenance requests, and check your police verification status.</p>
+    <p>Regards,<br/>${env.company.representativeName || env.company.name}</p>
+  `;
+  return sendMail({ to, subject: `Your login for flat ${flatCode}`, html });
 }
 
 async function sendReceiptEmail({ to, tenantName, flatCode, receiptNo, amount, forMonth, pdfBuffer }) {
-  const subject = `Receipt ${receiptNo} for Flat ${flatCode}`;
-  const html = basicHtmlLayout(
-    'Payment receipt confirmed',
-    `
-      <p>Dear ${tenantName},</p>
-      <p>Your payment for <strong>${forMonth}</strong> has been confirmed.</p>
-      <p>
-        <strong>Flat:</strong> ${flatCode}<br>
-        <strong>Receipt No:</strong> ${receiptNo}<br>
-        <strong>Amount:</strong> Rs. ${Number(amount || 0).toFixed(2)}
-      </p>
-      <p>Your receipt PDF is attached to this email.</p>
-    `
-  );
-
+  const html = `
+    <p>Dear ${tenantName},</p>
+    <p>We've received your rent payment for <strong>${forMonth}</strong> (Flat ${flatCode}).
+    Receipt <strong>${receiptNo}</strong> is attached.</p>
+    <p>Amount confirmed: <strong>\u20B9${amount}</strong></p>
+    <p>Regards,<br/>${env.company.representativeName || env.company.name}</p>
+  `;
   return sendMail({
     to,
-    subject,
+    subject: `Rent receipt ${receiptNo} - Flat ${flatCode}`,
     html,
     attachments: pdfBuffer
-      ? [{ filename: `${receiptNo}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
+      ? [{ filename: `${receiptNo}.pdf`, content: pdfBuffer }]
       : [],
-    dedupeKey: crypto.createHash('sha256').update(`receipt|${to}|${receiptNo}|${amount}|${forMonth}`).digest('hex'),
   });
 }
 
-module.exports = {
-  sendMail,
-  sendWelcomeEmail,
-  sendReceiptEmail,
-};
+module.exports = { sendMail, sendWelcomeEmail, sendReceiptEmail };

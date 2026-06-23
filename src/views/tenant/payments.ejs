@@ -1,235 +1,93 @@
-<%- include('../partials/head', { title: 'Payments' }) %>
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head', { title: 'Pay rent' }) %></head>
+<body>
 <%- include('../partials/tenant-nav', { active: 'payments' }) %>
+<div class="shell">
+  <div class="page-head">
+    <h1>Pay rent</h1>
+    <p><%= monthLabel %> · Flat <span class="mono"><%= tenant.flat_code %></span></p>
+  </div>
 
-<section class="container">
-  <div class="page-header">
-    <div>
-      <h1>Payments</h1>
-      <p><%= monthLabel %> • Flat <%= tenant.flat_code %></p>
+  <div class="pay-grid">
+    <div class="card">
+      <h3>Where to pay</h3>
+
+      <div class="qr-box">
+        <img src="/api/payment-qr.png?amount=<%= tenant.rent_amount %>&note=Rent+<%= tenant.flat_code %>" alt="UPI QR code" width="200" height="200">
+        <p class="hint">Scan with any UPI app - the amount is pre-filled.</p>
+      </div>
+
+      <div style="margin-top:18px">
+        <div class="copy-line"><span>UPI ID</span><span class="v"><%= payment.upiId %></span></div>
+        <div class="copy-line"><span>Payee name</span><span class="v"><%= payment.upiPayeeName %></span></div>
+      </div>
+
+      <h3 style="margin-top:24px">Or bank transfer</h3>
+      <div class="copy-line"><span>Account name</span><span class="v"><%= payment.bankAccountName %></span></div>
+      <div class="copy-line"><span>Account number</span><span class="v"><%= payment.bankAccountNumber %></span></div>
+      <div class="copy-line"><span>IFSC</span><span class="v"><%= payment.bankIfsc %></span></div>
+      <div class="copy-line"><span>Bank & branch</span><span class="v"><%= payment.bankName %> <%= payment.bankBranch %></span></div>
+    </div>
+
+    <div class="card">
+      <h3>After you've paid, tell us</h3>
+      <p class="hint">Enter the amount and the reference / UTR number from your bank or UPI app. We'll confirm it and email you a receipt.</p>
+      <form method="POST" action="/tenant/payments">
+        <input type="hidden" name="for_month" value="<%= currentMonth %>">
+
+        <label for="amount_paid">Amount paid (₹)</label>
+        <input id="amount_paid" name="amount_paid" type="number" min="0" step="1" required
+               value="<%= thisMonthPayment ? thisMonthPayment.amount_paid : tenant.rent_amount %>">
+
+        <label for="payment_date">Date paid</label>
+        <input id="payment_date" name="payment_date" type="date" required value="<%= thisMonthPayment ? thisMonthPayment.payment_date : '' %>">
+
+        <label for="mode">Payment mode</label>
+        <select id="mode" name="mode" required>
+          <option value="UPI">UPI</option>
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="Cash">Cash</option>
+          <option value="Cheque">Cheque</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <label for="reference_no">Reference / UTR number</label>
+        <input id="reference_no" name="reference_no" required placeholder="e.g. 12-digit UPI ref number"
+               value="<%= thisMonthPayment ? thisMonthPayment.reference_no : '' %>">
+
+        <div class="btn-row">
+          <button class="btn" type="submit">Submit for confirmation</button>
+        </div>
+      </form>
     </div>
   </div>
 
-  <div class="layout-grid">
-    <section class="card">
-      <h2>Submit payment details</h2>
-      <p class="muted">You can split one payment into rent, electricity, water, maintenance, penalty, GST, or other heads. Admin will review and confirm the receipt.</p>
-
-      <% if (payment && payment.upiLink) { %>
-        <div class="upi-box">
-          <p><strong>Pay by UPI</strong></p>
-          <p>Scan with any UPI app or use your bank app, then submit the transaction reference below.</p>
-          <% if (payment.qrImageDataUri) { %>
-            <img src="<%= payment.qrImageDataUri %>" alt="UPI QR" class="qr-image">
-          <% } %>
-        </div>
-      <% } %>
-
-      <form method="post" action="/tenant/payments" class="payment-form" onsubmit="disableSubmit(this)">
-        <div class="grid-2">
-          <div>
-            <label>For month</label>
-            <input type="month" name="for_month" value="<%= currentMonth %>" required>
-          </div>
-          <div>
-            <label>Payment date</label>
-            <input type="date" name="payment_date" required>
-          </div>
-          <div>
-            <label>Total paid amount</label>
-            <input type="number" step="0.01" name="amount_paid" value="<%= thisMonthPayment?.amount_paid || tenant.rent_amount || 0 %>" required>
-          </div>
-          <div>
-            <label>Payment mode</label>
-            <select name="mode" required>
-              <option value="UPI">UPI</option>
-              <option value="Bank Transfer">Bank Transfer</option>
-              <option value="Cash">Cash</option>
-              <option value="Cheque">Cheque</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-          <div>
-            <label>Reference / UTR No.</label>
-            <input type="text" name="reference_no" placeholder="Transaction reference number">
-          </div>
-          <div>
-            <label>Notes</label>
-            <input type="text" name="notes" placeholder="Optional note for admin">
-          </div>
-        </div>
-
-        <div class="line-items-box">
-          <div class="line-items-head">
-            <h3>Payment breakup</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="addLineItem()">Add line</button>
-          </div>
-          <div id="line-items">
-            <div class="line-item-row">
-              <select name="item_purpose">
-                <option value="rent">Rent</option>
-                <option value="security_deposit">Security Deposit</option>
-                <option value="electricity">Electricity</option>
-                <option value="water">Water</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="penalty">Penalty</option>
-                <option value="parking">Parking</option>
-                <option value="club_charges">Club Charges</option>
-                <option value="gst">GST</option>
-                <option value="other">Other</option>
-              </select>
-              <input type="text" name="item_label" placeholder="Custom label if Other">
-              <input type="number" step="0.01" name="item_amount" placeholder="Amount" required>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="removeLine(this)">Remove</button>
-            </div>
-          </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary" id="submitBtn">Submit Payment</button>
-      </form>
-    </section>
-
-    <aside class="side-stack">
-      <section class="card">
-        <h2>Current dues</h2>
-        <% if (!dues || !dues.length) { %>
-          <p class="muted">No dues added right now.</p>
-        <% } else { %>
-          <div class="dues-list">
-            <% dues.slice(0, 8).forEach((d) => { %>
-              <div class="due-row">
-                <div>
-                  <strong><%= d.custom_label || d.due_type %></strong>
-                  <small><%= d.for_month || d.due_date || 'No date' %></small>
-                </div>
-                <div class="right-align">
-                  <strong><%= formatINR(d.due_amount || 0) %></strong>
-                  <small class="status <%= d.status %>"><%= d.status %></small>
-                </div>
-              </div>
-            <% }) %>
-          </div>
-        <% } %>
-      </section>
-
-      <section class="card">
-        <h2>Payment history</h2>
-        <% if (!payments || !payments.length) { %>
-          <p class="muted">No payments submitted yet.</p>
-        <% } else { %>
-          <div class="history-list">
-            <% payments.forEach((p) => { const items = paymentItemsMap && paymentItemsMap[p.id] ? paymentItemsMap[p.id] : []; %>
-              <div class="history-item">
-                <div class="split-row">
-                  <strong><%= p.for_month %></strong>
-                  <span class="badge <%= p.status === 'confirmed' ? 'badge-success' : 'badge-warning' %>"><%= p.status %></span>
-                </div>
-                <div class="muted"><%= p.amount_paid ? formatINR(p.amount_paid) : '-' %> • <%= p.reference_no || 'No reference' %></div>
-                <% if (p.receipt_no) { %>
-                  <div class="muted">Receipt: <%= p.receipt_no %></div>
-                <% } %>
-                <% if (p.status !== 'confirmed') { %>
-                  <div style="margin-top:6px;">
-                    <a href="/tenant/payments/<%= p.id %>/edit" class="link-btn">Edit</a>
-                  </div>
-                <% } %>
-                <% if (items.length) { %>
-                  <ul class="item-list">
-                    <% items.forEach((item) => { %>
-                      <li><%= item.custom_label || item.purpose %> - <%= formatINR(item.amount || 0) %></li>
-                    <% }) %>
-                  </ul>
-                <% } %>
-              </div>
-            <% }) %>
-          </div>
-        <% } %>
-      </section>
-    </aside>
+  <div class="card">
+    <h3>Payment history</h3>
+    <% if (payments.length === 0) { %>
+      <p class="empty">No payments submitted yet.</p>
+    <% } else { %>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Month</th><th class="num">Paid</th><th>Reference</th><th>Status</th></tr></thead>
+        <tbody>
+        <% payments.forEach(p => { %>
+          <tr>
+            <td><%= p.for_month %></td>
+            <td class="num mono"><%= p.amount_paid ? formatINR(p.amount_paid) : '-' %></td>
+            <td class="mono"><%= p.reference_no || '-' %></td>
+            <td>
+              <% if (p.status === 'confirmed') { %><span class="badge badge-success">Confirmed</span>
+              <% } else { %><span class="badge badge-warning">Pending</span><% } %>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+      </div>
+    <% } %>
   </div>
-</section>
-
-<script>
-  function addLineItem() {
-    const wrap = document.getElementById('line-items');
-    const row = document.createElement('div');
-    row.className = 'line-item-row';
-    row.innerHTML = `
-      <select name="item_purpose">
-        <option value="rent">Rent</option>
-        <option value="security_deposit">Security Deposit</option>
-        <option value="electricity">Electricity</option>
-        <option value="water">Water</option>
-        <option value="maintenance">Maintenance</option>
-        <option value="penalty">Penalty</option>
-        <option value="parking">Parking</option>
-        <option value="club_charges">Club Charges</option>
-        <option value="gst">GST</option>
-        <option value="other">Other</option>
-      </select>
-      <input type="text" name="item_label" placeholder="Custom label if Other">
-      <input type="number" step="0.01" name="item_amount" placeholder="Amount" required>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="removeLine(this)">Remove</button>
-    `;
-    wrap.appendChild(row);
-  }
-
-  function removeLine(button) {
-    const rows = document.querySelectorAll('.line-item-row');
-    if (rows.length === 1) return;
-    button.closest('.line-item-row').remove();
-  }
-
-  function disableSubmit(form) {
-    const btn = document.getElementById('submitBtn');
-    if (!btn) return true;
-    btn.disabled = true;
-    btn.innerText = 'Submitting...';
-    return true;
-  }
-</script>
-
-<style>
-  .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px 40px; }
-  .page-header { margin-bottom: 20px; }
-  .page-header h1 { margin: 0 0 8px; }
-  .page-header p { margin: 0; color: #6b7280; }
-  .layout-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; }
-  .side-stack { display: grid; gap: 16px; }
-  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px; }
-  .card h2 { margin-top: 0; }
-  .muted { color: #6b7280; }
-  .payment-form label { display: block; font-size: 12px; font-weight: 700; color: #4b5563; margin-bottom: 6px; }
-  .payment-form input, .payment-form select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font: inherit; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-  .line-items-box { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fafafa; margin-bottom: 16px; }
-  .line-items-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
-  .line-items-head h3 { margin: 0; font-size: 1rem; }
-  .line-item-row { display: grid; grid-template-columns: 1.2fr 1fr 160px 100px; gap: 10px; margin-bottom: 10px; }
-  .btn { border: 0; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 700; }
-  .btn-sm { font-size: 13px; padding: 8px 10px; }
-  .btn-primary { background: #111827; color: #fff; }
-  .btn-secondary { background: #f3f4f6; color: #111827; }
-  .dues-list, .history-list { display: grid; gap: 10px; }
-  .due-row, .history-item { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fafafa; }
-  .due-row { display: flex; justify-content: space-between; gap: 10px; }
-  .due-row small, .history-item .muted { display: block; margin-top: 4px; }
-  .right-align { text-align: right; }
-  .status { text-transform: capitalize; }
-  .status.overdue { color: #b91c1c; }
-  .status.current { color: #92400e; }
-  .status.upcoming { color: #1d4ed8; }
-  .status.paid { color: #166534; }
-  .split-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
-  .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: capitalize; }
-  .badge-success { background: #dcfce7; color: #166534; }
-  .badge-warning { background: #fef3c7; color: #92400e; }
-  .item-list { margin: 8px 0 0; padding-left: 18px; color: #4b5563; }
-  .upi-box { border: 1px dashed #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 12px; margin-bottom: 16px; }
-  .qr-image { max-width: 180px; margin-top: 10px; border-radius: 12px; border: 1px solid #e5e7eb; }
-  @media (max-width: 1000px) {
-    .layout-grid { grid-template-columns: 1fr; }
-  }
-  @media (max-width: 700px) {
-    .grid-2, .line-item-row { grid-template-columns: 1fr; }
-  }
-</style>
+</div>
+</body>
+</html>

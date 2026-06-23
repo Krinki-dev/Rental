@@ -47,7 +47,6 @@
               <% } else if (m.status === 'in_progress') { %><span class="badge badge-warning">In progress</span>
               <% } else { %><span class="badge badge-danger">Open</span><% } %>
             </td>
-            <td><a href="/tenant/maintenance/<%= m.id %>/edit" class="link-btn">Edit</a></td>
           </tr>
         <% }) %>
         </tbody>
