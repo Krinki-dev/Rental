@@ -17,6 +17,18 @@
     <div class="stat-card"><div class="label">Pending confirmation</div><div class="value"><%= pendingCount %></div></div>
   </div>
 
+  <div class="card">
+    <h3>Quick Password Reset</h3>
+    <p class="hint">Reset tenant password to default format (FirstName@FlatNo). Find the flat code from the <a href="/admin/flats">Flats</a> page.</p>
+    <form method="POST" action="/admin/flats/reset-password-by-flat" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+      <div style="flex:1; min-width:150px;">
+        <label for="flat_code">Flat Code</label>
+        <input id="flat_code" name="flat_code" placeholder="e.g., E0309" required>
+      </div>
+      <button class="btn btn-secondary" type="submit">Reset Password</button>
+    </form>
+  </div>
+
   <div class="card-row">
     <div class="card">
       <h3>Police verification pending</h3>

@@ -281,6 +281,31 @@ router.post('/flats/:id/reset-password', async (req, res) => {
   res.redirect(`/admin/flats/${flatId}`);
 });
 
+// Quick password reset from dashboard by flat code
+router.post('/flats/reset-password-by-flat', async (req, res) => {
+  const { flat_code } = req.body;
+  const [[flat]] = await pool.query('SELECT * FROM flats WHERE flat_code = ?', [flat_code.trim()]);
+  if (!flat) return res.status(404).send('Flat not found');
+
+  const [[tenant]] = await pool.query(
+    'SELECT * FROM tenants WHERE flat_id = ? AND is_active = 1 LIMIT 1',
+    [flat.id]
+  );
+  if (!tenant) return res.status(404).send('No active tenant in this flat');
+
+  // Generate password in format: FirstName@FlatCode
+  const firstName = tenant.full_name.split(' ')[0];
+  const newPassword = generateTempPassword(firstName, flat.flat_code);
+  const hash = await hashPassword(newPassword);
+
+  await pool.query(
+    'UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?',
+    [hash, tenant.user_id]
+  );
+
+  res.redirect('/admin/dashboard');
+});
+
 // ---------- Maintenance ----------
 router.get('/maintenance', async (req, res) => {
   const [requests] = await pool.query(
