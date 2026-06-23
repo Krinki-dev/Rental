@@ -78,9 +78,16 @@
         <%= tenant.phone %><% if (tenant.email) { %> · <%= tenant.email %><% } %></p>
         <p class="hint">Agreement: <%= tenant.agreement_start %> → <%= tenant.agreement_end %></p>
         <p class="hint">Security deposit: <%= formatINR(tenant.security_deposit) %></p>
-        <form method="POST" action="/admin/flats/<%= flat.id %>/vacate" onsubmit="return confirm('Mark this tenant as moved out?')">
+        <p class="hint" style="background:#f3f4f6; padding:8px; border-radius:6px; margin-top:8px;">
+          <strong>Default password:</strong> <code style="font-size:14px;"><%= tenant.full_name.split(' ')[0] %>@<%= flat.flat_code %></code>
+        </p>
+        <form method="POST" action="/admin/flats/<%= flat.id %>/reset-password" style="margin-top:10px;">
           <input type="hidden" name="tenant_id" value="<%= tenant.id %>">
-          <button class="btn btn-secondary btn-sm" type="submit" style="margin-top:10px">Mark as vacated</button>
+          <button class="btn btn-secondary btn-sm" type="submit">Reset Password</button>
+        </form>
+        <form method="POST" action="/admin/flats/<%= flat.id %>/vacate" onsubmit="return confirm('Mark this tenant as moved out?')" style="margin-top:10px;">
+          <input type="hidden" name="tenant_id" value="<%= tenant.id %>">
+          <button class="btn btn-danger btn-sm" type="submit">Mark as vacated</button>
         </form>
       </div>
 

@@ -115,7 +115,8 @@ router.post('/flats/:id/tenant', async (req, res) => {
   const [[flat]] = await pool.query('SELECT * FROM flats WHERE id = ?', [flatId]);
   if (!flat) return res.status(404).send('Flat not found');
 
-  const tempPassword = generateTempPassword();
+  const firstName = full_name.split(' ')[0]; // Get first name
+  const tempPassword = generateTempPassword(firstName, flat.flat_code);
   const hash = await hashPassword(tempPassword);
 
   const conn = await pool.getConnection();
@@ -251,6 +252,33 @@ router.post('/payments/:id/confirm', async (req, res) => {
   });
 
   res.redirect('/admin/payments');
+});
+
+// ---------- Password Reset ----------
+router.post('/flats/:id/reset-password', async (req, res) => {
+  const flatId = req.params.id;
+  const { tenant_id } = req.body;
+  const [[tenant]] = await pool.query(
+    `SELECT t.id, t.user_id, t.full_name, f.flat_code
+     FROM tenants t
+     JOIN flats f ON f.id = t.flat_id
+     WHERE t.id = ? AND t.flat_id = ?`,
+    [tenant_id, flatId]
+  );
+
+  if (!tenant) return res.status(404).send('Tenant not found');
+
+  // Generate password in format: FirstName@FlatCode
+  const firstName = tenant.full_name.split(' ')[0];
+  const newPassword = generateTempPassword(firstName, tenant.flat_code);
+  const hash = await hashPassword(newPassword);
+
+  await pool.query(
+    'UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?',
+    [hash, tenant.user_id]
+  );
+
+  res.redirect(`/admin/flats/${flatId}`);
 });
 
 // ---------- Maintenance ----------

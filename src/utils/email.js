@@ -52,8 +52,10 @@ async function sendWelcomeEmail({ to, tenantName, flatCode, loginUsername, tempP
     <p>
       <strong>Login link:</strong> <a href="${loginUrl}">${loginUrl}</a><br/>
       <strong>Username (Flat Code):</strong> ${loginUsername}<br/>
-      <strong>Temporary password:</strong> ${tempPassword}
+      <strong style="font-size:16px; color:#2563eb;">Your first password:</strong> <code style="background:#f3f4f6; padding:4px 8px; border-radius:4px; font-size:16px;">${tempPassword}</code>
     </p>
+    <p><strong>Note:</strong> Your first password is your first name + flat code (e.g., Krishan@0309).<br/>
+    If email delivery fails, please contact admin to get your password manually.</p>
     <p>Please log in and change your password. From your portal you can view your agreement,
     pay rent, raise maintenance requests, and check your police verification status.</p>
     <p>Regards,<br/>${env.company.representativeName || env.company.name}</p>

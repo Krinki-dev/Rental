@@ -131,6 +131,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .btn:hover { background: var(--accent-dark); }
 .btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
 .btn-secondary:hover { background: var(--paper); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: var(--danger); opacity: 0.9; }
 .btn-sm { padding: 6px 12px; font-size: 13px; }
 .btn-row { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
 
